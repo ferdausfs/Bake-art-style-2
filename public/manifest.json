@@ -1,0 +1,12 @@
+{
+  "name": "বেক আর্ট স্টাইল",
+  "short_name": "BakeArt",
+  "description": "হোমমেড কেক — কুমিল্লা",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff1f2",
+  "theme_color": "#f43f5e",
+  "lang": "bn",
+  "orientation": "portrait",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
