@@ -39,8 +39,8 @@ export function LocationGate({ onDismiss }: Props) {
       const matchedZone = matchZone(addressText, settings.allowedZones ?? []);
 
       setDistrict(matchedZone || city || 'আপনার এলাকা');
-      if (matchedZone) {
-        setLocation(matchedZone, lat, lng);
+      if (matchedZone || settings.deliveryZonesEnabled === false) {
+        setLocation(matchedZone || city || 'Verified area', lat, lng);
         setStatus('allowed');
         setTimeout(onDismiss, 1500);
       } else {
@@ -107,7 +107,7 @@ export function LocationGate({ onDismiss }: Props) {
             <AlertCircle className="w-12 h-12 text-orange-400 mx-auto" />
             <h2 className="font-bold text-ink">দুঃখিত!</h2>
             <p className="text-sm text-ink/60">
-              আমরা এখনো <strong>{district}</strong>-এ ডেলিভারি দিই না। WhatsApp-এ যোগাযোগ করুন, আমরা সাহায্য করার চেষ্টা করবো!
+              {settings.outOfZoneMessage || 'আমরা এখনো এই এলাকায় ডেলিভারি দিই না। WhatsApp-এ যোগাযোগ করুন, আমরা সাহায্য করার চেষ্টা করবো!'}
             </p>
             <button onClick={openWhatsApp}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-500 text-white font-bold text-sm">

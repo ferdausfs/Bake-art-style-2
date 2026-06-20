@@ -157,6 +157,9 @@ export interface SiteSettings {
   promoCode: string;
   promoPercent: number;
   deliveryFee: number;
+  freeDeliveryThreshold?: number;
+  deliveryZonesEnabled?: boolean;
+  outOfZoneMessage?: string;
   geminiApiKey: string;
   whatsappNumber: string;
   upiId: string;

@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Edit3, Check, Download, RefreshCw, Star, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Trash2, Edit3, Check, Download, RefreshCw, Star, Image as ImageIcon, Users, MapPin } from 'lucide-react';
 import { useProducts } from '../hooks/useProducts';
 import { useOrdersHook } from '../hooks/useOrders';
 import { useGallery } from '../hooks/useGallery';
 import { useReviews } from '../hooks/useReviews';
+import { useCustomers } from '../hooks/useCustomers';
 import { useSettingsStore, useUI } from '../lib/store';
 import { DEFAULT_SETTINGS } from '../lib/data';
 import { formatINR } from '../lib/utils';
 import type { Product, Order } from '../types';
 
-type AdminTab = 'dashboard' | 'orders' | 'products' | 'gallery' | 'reviews' | 'settings';
+type AdminTab = 'dashboard' | 'orders' | 'products' | 'gallery' | 'reviews' | 'customers' | 'zones' | 'settings';
 
 const STATUS_LABELS: Record<string, string> = {
   placed: '🕐 Placed', confirmed: '✅ Confirmed',
@@ -31,6 +32,7 @@ export function AdminPanel({ onClose }: Props) {
   const { orders, fetchOrders, subscribeToNewOrders } = useOrdersHook();
   const { gallery, saveGalleryItem, deleteGalleryItem, uploadGalleryImage } = useGallery();
   const { reviews, approveReview, deleteReview } = useReviews();
+  const { customers, loading: customersLoading } = useCustomers();
   const { clearNewOrders } = useUI();
 
   const [pinInput, setPinInput] = useState('');
@@ -42,6 +44,7 @@ export function AdminPanel({ onClose }: Props) {
   const [imgUploading, setImgUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [newGalleryCaption, setNewGalleryCaption] = useState('');
+  const [newZone, setNewZone] = useState('');
   const productImgRef = useRef<HTMLInputElement>(null);
   const galleryImgRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +98,8 @@ export function AdminPanel({ onClose }: Props) {
     { id: 'products', label: '🧁 Products' },
     { id: 'gallery', label: '🖼️ Gallery' },
     { id: 'reviews', label: '⭐ Reviews', badge: reviews.filter((r) => !r.approved).length },
+    { id: 'customers', label: '👥 Customers', badge: customers.length },
+    { id: 'zones', label: '📍 Zones' },
     { id: 'settings', label: '⚙️ Settings' },
   ];
 
@@ -375,6 +380,105 @@ export function AdminPanel({ onClose }: Props) {
               </div>
             ))}
             {reviews.length === 0 && <div className="text-center py-16 text-ink/30 text-sm">No reviews yet</div>}
+          </div>
+        )}
+
+        {/* Customers */}
+        {tab === 'customers' && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-white p-4">
+                <p className="text-xl font-black text-coral">{customers.length}</p>
+                <p className="text-xs font-bold text-ink">Customers</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4">
+                <p className="text-xl font-black text-coral">{formatINR(customers.reduce((s, c) => s + c.totalSpent, 0))}</p>
+                <p className="text-xs font-bold text-ink">Total spent</p>
+              </div>
+            </div>
+            {customersLoading && <div className="text-center py-8 text-ink/40 text-sm">Loading customers...</div>}
+            {!customersLoading && customers.map((c) => (
+              <div key={c.id} className="rounded-2xl bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-coral-50 text-coral">
+                    {c.avatar ? <img src={c.avatar} alt="" className="h-full w-full rounded-full object-cover" /> : <Users className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-ink">{c.name}</p>
+                    <p className="truncate text-[11px] text-ink/45">{c.email || c.phone || 'Guest customer'}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[9px] font-bold text-ink/45 uppercase">{c.source}</span>
+                      <span className="rounded-full bg-coral/10 px-2 py-0.5 text-[9px] font-bold text-coral">{c.orderCount} orders</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-coral">{formatINR(c.totalSpent)}</p>
+                    {c.lastOrderDate > 0 && <p className="text-[9px] text-ink/35">{new Date(c.lastOrderDate).toLocaleDateString('en-BD')}</p>}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!customersLoading && customers.length === 0 && <div className="text-center py-16 text-ink/30 text-sm">No customers yet</div>}
+          </div>
+        )}
+
+        {/* Zones */}
+        {tab === 'zones' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-white p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-ink">Delivery zone gating</p>
+                  <p className="text-[11px] text-ink/45">Checkout location check on/off</p>
+                </div>
+                <button
+                  onClick={() => updateSettings({ deliveryZonesEnabled: !settings.deliveryZonesEnabled })}
+                  className={`h-7 w-12 rounded-full transition-colors ${settings.deliveryZonesEnabled ? 'bg-coral' : 'bg-ink/20'}`}
+                >
+                  <div className={`m-1 h-5 w-5 rounded-full bg-white transition-transform ${settings.deliveryZonesEnabled ? 'translate-x-5' : ''}`} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(settings.allowedZones ?? []).map((z) => (
+                  <span key={z} className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink">
+                    <MapPin className="h-3 w-3 text-coral" /> {z}
+                    <button onClick={() => updateSettings({ allowedZones: (settings.allowedZones ?? []).filter((x) => x !== z) })} className="text-ink/50">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={newZone}
+                  onChange={(e) => setNewZone(e.target.value)}
+                  placeholder="Add zone..."
+                  className="h-11 flex-1 rounded-xl border border-ink/10 bg-cream px-3 text-xs text-ink focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    const zone = newZone.trim();
+                    if (!zone) return;
+                    if (!(settings.allowedZones ?? []).some((z) => z.toLowerCase() === zone.toLowerCase())) {
+                      updateSettings({ allowedZones: [...(settings.allowedZones ?? []), zone] });
+                    }
+                    setNewZone('');
+                  }}
+                  className="rounded-xl bg-coral px-4 text-xs font-bold text-white"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white p-4">
+              <label className="text-[10px] font-bold uppercase text-ink/50">Out-of-zone message</label>
+              <textarea
+                value={settings.outOfZoneMessage ?? ''}
+                onChange={(e) => updateSettings({ outOfZoneMessage: e.target.value })}
+                rows={3}
+                className="mt-1 w-full resize-none rounded-xl border border-ink/10 bg-cream p-3 text-xs text-ink focus:outline-none"
+              />
+            </div>
           </div>
         )}
 
