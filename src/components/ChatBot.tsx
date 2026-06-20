@@ -36,6 +36,8 @@ export function ChatBot({ embedded = false }: Props) {
   const { products } = useProducts();
   const { orders } = useOrders();
   const { user } = useAuthStore();
+  const { orders } = useOrders();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (embedded) setTimeout(() => inputRef.current?.focus(), 200);
