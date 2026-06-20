@@ -167,5 +167,4 @@ export interface SiteSettings {
   deliveryEstimate: string;
   coupons: Coupon[];
   allowedZones: string[];
-  customFlavorImages?: Record<string, string>;
 }

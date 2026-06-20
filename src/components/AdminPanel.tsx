@@ -631,33 +631,6 @@ export function AdminPanel({ onClose }: Props) {
                   })} />
               </div>
             ))}
-            <div className="rounded-2xl bg-white p-4 space-y-2">
-              <div>
-                <p className="text-xs font-bold text-ink">Custom cake flavour images</p>
-                <p className="text-[10px] text-ink/40">Normal/default cake image URL per flavour</p>
-              </div>
-
-              {['Chocolate', 'Vanilla', 'Red Velvet', 'Butterscotch', 'Strawberry', 'Pistachio'].map((flavour) => (
-                <div key={flavour}>
-                  <label className="text-[10px] font-bold text-ink/50 uppercase">
-                    {flavour} image URL
-                  </label>
-                  <input
-                    className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
-                    value={localSettings.customFlavorImages?.[flavour] ?? ''}
-                    onChange={(e) => setLocalSettings({
-                      ...localSettings,
-                      customFlavorImages: {
-                        ...(localSettings.customFlavorImages ?? {}),
-                        [flavour]: e.target.value,
-                      },
-                    })}
-                    placeholder={`/cakes/${flavour.toLowerCase().replace(/ /g, '-')}.png`}
-                  />
-                </div>
-              ))}
-            </div>
-
             <div className="flex items-center justify-between py-1">
               <label className="text-xs font-bold text-ink">Promo Enabled</label>
               <button onClick={() => setLocalSettings({ ...localSettings, promoEnabled: !localSettings.promoEnabled })}

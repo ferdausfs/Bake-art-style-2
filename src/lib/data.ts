@@ -135,12 +135,4 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   deliveryEstimate: '2–4 ঘণ্টা',
   coupons: [],
   allowedZones: ['Comilla', 'Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Mymensingh', 'Barishal'],
-  customFlavorImages: {
-    Chocolate: '/cakes/chocolate-truffle.png',
-    Vanilla: '/cakes/logo-cake.png',
-    'Red Velvet': '/cakes/red-velvet.png',
-    Butterscotch: '/cakes/butterscotch.png',
-    Strawberry: '/cakes/strawberry-pink.png',
-    Pistachio: '/cakes/logo-cake.png',
-  },
 };
