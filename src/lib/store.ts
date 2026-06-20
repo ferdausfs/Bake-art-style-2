@@ -116,7 +116,7 @@ export const useCart = create<CartState>()(
         })),
       clear: () => set({ items: [] }),
     }),
-    { name: 'bakeart-cart' }
+    { name: 'bakeart-cart', version: 2 }
   )
 );
 
@@ -158,7 +158,7 @@ export const useOrders = create<OrderState>()(
           orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
         })),
     }),
-    { name: 'bakeart-orders' }
+    { name: 'bakeart-orders', version: 2 }
   )
 );
 
@@ -179,7 +179,7 @@ export const useUser = create<UserState>()(
             : [...s.wishlist, id],
         })),
     }),
-    { name: 'bakeart-user' }
+    { name: 'bakeart-user', version: 2 }
   )
 );
 
@@ -209,7 +209,7 @@ export const useAuthStore = create<AuthState>()(
       login: (user) => set({ user }),
       logout: () => set({ user: null }),
     }),
-    { name: 'bakeart-auth' }
+    { name: 'bakeart-auth', version: 2 }
   )
 );
 
@@ -229,7 +229,14 @@ export const useSettingsStore = create<SettingsState>()(
           return { settings: next };
         }),
     }),
-    { name: 'bakeart-settings' }
+    {
+      name: 'bakeart-settings',
+      version: 2,
+      merge: (persisted, current) => {
+        const p = (persisted as { settings?: Partial<SiteSettings> } | undefined)?.settings ?? {};
+        return { ...current, settings: { ...DEFAULT_SETTINGS, ...p } };
+      },
+    }
   )
 );
 
@@ -250,7 +257,7 @@ export const useLocation = create<LocationState>()(
       setLocation: (district, lat, lng) => set({ district, lat, lng, verified: true }),
       clearLocation: () => set({ district: null, lat: null, lng: null, verified: false }),
     }),
-    { name: 'bakeart-location' }
+    { name: 'bakeart-location', version: 2 }
   )
 );
 

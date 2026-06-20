@@ -1,21 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Edit3, Check, Download, RefreshCw, Star, Image as ImageIcon, Users, MapPin } from 'lucide-react';
+import { X, Plus, Trash2, Edit3, Check, Download, RefreshCw, Star, Image as ImageIcon } from 'lucide-react';
 import { useProducts } from '../hooks/useProducts';
 import { useOrdersHook } from '../hooks/useOrders';
 import { useGallery } from '../hooks/useGallery';
 import { useReviews } from '../hooks/useReviews';
-import { useCustomers } from '../hooks/useCustomers';
 import { useSettingsStore, useUI } from '../lib/store';
 import { DEFAULT_SETTINGS } from '../lib/data';
-import { formatINR, waLink } from '../lib/utils';
+import { formatINR } from '../lib/utils';
 import type { Product, Order } from '../types';
 
-type AdminTab = 'dashboard' | 'orders' | 'products' | 'gallery' | 'reviews' | 'customers' | 'zones' | 'settings';
+type AdminTab = 'dashboard' | 'orders' | 'products' | 'gallery' | 'reviews' | 'settings';
 
 const STATUS_LABELS: Record<string, string> = {
   placed: '🕐 Placed', confirmed: '✅ Confirmed',
   baking: '👩‍🍳 Baking', ready: '📦 Ready', out: '🚗 Out for Delivery', delivered: '🎉 Delivered',
-  cancelled: '❌ Cancelled',
 };
 
 const EMPTY_PRODUCT = {
@@ -29,11 +27,14 @@ interface Props { onClose: () => void; }
 
 export function AdminPanel({ onClose }: Props) {
   const { settings, updateSettings } = useSettingsStore();
-  const { products, saveProduct, deleteProduct, uploadProductImage } = useProducts();
-  const { orders, fetchOrders, updateStatus, subscribeToNewOrders } = useOrdersHook();
-  const { gallery, saveGalleryItem, deleteGalleryItem, uploadGalleryImage } = useGallery();
-  const { reviews, approveReview, deleteReview } = useReviews();
-  const { customers, loading: customersLoading } = useCustomers();
+  const { products: rawProducts, saveProduct, deleteProduct, uploadProductImage } = useProducts();
+  const products = rawProducts ?? [];
+  const { orders: rawOrders, fetchOrders, subscribeToNewOrders } = useOrdersHook();
+  const orders = rawOrders ?? [];
+  const { gallery: rawGallery, saveGalleryItem, deleteGalleryItem, uploadGalleryImage } = useGallery();
+  const gallery = rawGallery ?? [];
+  const { reviews: rawReviews, approveReview, deleteReview } = useReviews();
+  const reviews = rawReviews ?? [];
   const { clearNewOrders } = useUI();
 
   const [pinInput, setPinInput] = useState('');
@@ -45,8 +46,6 @@ export function AdminPanel({ onClose }: Props) {
   const [imgUploading, setImgUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [newGalleryCaption, setNewGalleryCaption] = useState('');
-  const [newZone, setNewZone] = useState('');
-  const [orderFilter, setOrderFilter] = useState<'all' | Order['status']>('all');
   const productImgRef = useRef<HTMLInputElement>(null);
   const galleryImgRef = useRef<HTMLInputElement>(null);
 
@@ -100,23 +99,8 @@ export function AdminPanel({ onClose }: Props) {
     { id: 'products', label: '🧁 Products' },
     { id: 'gallery', label: '🖼️ Gallery' },
     { id: 'reviews', label: '⭐ Reviews', badge: reviews.filter((r) => !r.approved).length },
-    { id: 'customers', label: '👥 Customers', badge: customers.length },
-    { id: 'zones', label: '📍 Zones' },
     { id: 'settings', label: '⚙️ Settings' },
   ];
-
-  const ORDER_STATUSES: Order['status'][] = ['placed', 'confirmed', 'baking', 'ready', 'out', 'delivered', 'cancelled'];
-  const filteredOrders = orderFilter === 'all' ? orders : orders.filter((o) => o.status === orderFilter);
-  const topProducts = Object.entries(
-    orders.reduce<Record<string, number>>((acc, o) => {
-      o.items.forEach((item) => { acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity; });
-      return acc;
-    }, {})
-  )
-    .map(([id, qty]) => ({ product: products.find((p) => p.id === id), qty }))
-    .filter((x) => x.product)
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
 
   const exportCSV = () => {
     const rows = orders.map((o) => [
@@ -187,21 +171,6 @@ export function AdminPanel({ onClose }: Props) {
               ))}
             </div>
             <div className="bg-white rounded-2xl p-4">
-              <p className="text-xs font-bold text-ink mb-3">Top Products</p>
-              {topProducts.map(({ product, qty }) => (
-                <div key={product!.id} className="flex items-center gap-2.5 py-2 border-b border-ink/5 last:border-0">
-                  <img src={product!.image} alt="" className="h-10 w-10 rounded-xl object-cover bg-blush" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold text-ink">{product!.name}</p>
-                    <p className="text-[10px] text-ink/40">{qty} sold</p>
-                  </div>
-                  <p className="text-xs font-black text-coral">{formatINR(product!.price * qty)}</p>
-                </div>
-              ))}
-              {topProducts.length === 0 && <p className="text-center text-xs text-ink/30 py-4">No product sales yet</p>}
-            </div>
-
-            <div className="bg-white rounded-2xl p-4">
               <p className="text-xs font-bold text-ink mb-3">Recent Orders</p>
               {orders.slice(0, 5).map((o) => (
                 <div key={o.id} className="flex justify-between items-center py-2 border-b border-ink/5 last:border-0">
@@ -223,94 +192,34 @@ export function AdminPanel({ onClose }: Props) {
         {/* Orders */}
         {tab === 'orders' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-bold text-ink/60">{filteredOrders.length}/{orders.length} orders</p>
+            <div className="flex justify-between items-center">
+              <p className="text-xs font-bold text-ink/60">{orders.length} total</p>
               <button onClick={exportCSV} className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-coral text-white text-xs font-bold">
                 <Download className="w-3 h-3" /> Export CSV
               </button>
             </div>
-
-            <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1">
-              {(['all', ...ORDER_STATUSES] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setOrderFilter(s)}
-                  className={`flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold capitalize ${orderFilter === s ? 'bg-coral text-white' : 'bg-white text-ink/55'}`}
-                >
-                  {s === 'all' ? 'All' : s}
-                </button>
-              ))}
-            </div>
-
-            {filteredOrders.map((o) => (
+            {orders.map((o) => (
               <div key={o.id} className="bg-white rounded-2xl p-4">
-                <div className="flex justify-between items-start gap-3 mb-2">
-                  <div className="min-w-0">
-                    <p className="font-bold text-sm text-ink truncate">{o.customer.name}</p>
-                    <p className="text-[10px] font-mono text-ink/40">#{o.id} · {new Date(o.createdAt).toLocaleString('en-BD')}</p>
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <p className="font-bold text-sm text-ink">{o.customer.name}</p>
+                    <p className="text-[10px] font-mono text-ink/40">#{o.id} · {o.customer.phone}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-black text-coral">{formatINR(o.total)}</p>
-                    <p className="text-[10px] font-bold text-ink/45 capitalize">{o.payment}</p>
-                  </div>
+                  <p className="font-black text-coral">{formatINR(o.total)}</p>
                 </div>
-
-                <div className="rounded-xl bg-cream p-3 text-[11px] leading-relaxed text-ink/65">
-                  <p><span className="font-bold text-ink">Phone:</span> {o.customer.phone || 'N/A'}</p>
-                  {o.customer.email && <p><span className="font-bold text-ink">Email:</span> {o.customer.email}</p>}
-                  <p><span className="font-bold text-ink">Address:</span> {o.customer.address}, {o.customer.city}</p>
-                  <p><span className="font-bold text-ink">Delivery:</span> {o.delivery.date} · {o.delivery.time}</p>
-                </div>
-
-                <div className="mt-2 space-y-1.5">
-                  {o.items.map((i, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="truncate text-ink/65">{i.name} · {i.size} · {i.flavor} ×{i.quantity}</span>
-                      <span className="font-bold text-ink">{formatINR(i.price * i.quantity)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3">
-                  <label className="text-[10px] font-bold uppercase text-ink/40">Change order status</label>
-                  <select
-                    value={o.status}
-                    onChange={(e) => updateStatus(o.id, e.target.value as Order['status'])}
-                    className="mt-1 h-10 w-full rounded-xl border border-ink/10 bg-white px-3 text-xs font-bold text-ink focus:outline-none"
-                  >
-                    {ORDER_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                  </select>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {ORDER_STATUSES.map((s) => (
-                    <button key={s}
-                      onClick={() => updateStatus(o.id, s)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold ${o.status === s ? 'bg-coral text-white' : 'bg-ink/5 text-ink/45'}`}>
+                <p className="text-xs text-ink/60 mb-2">{o.items.map((i) => `${i.name} ×${i.quantity}`).join(', ')}</p>
+                <p className="text-[10px] text-ink/40 mb-2">{o.delivery.date} · {o.delivery.time} · {o.customer.address}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(['placed', 'confirmed', 'baking', 'ready', 'out', 'delivered'] as Order['status'][]).map((s) => (
+                    <span key={s}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${o.status === s ? 'bg-coral text-white' : 'bg-ink/5 text-ink/40'}`}>
                       {STATUS_LABELS[s]}
-                    </button>
+                    </span>
                   ))}
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                  <a
-                    href={waLink(o.customer.phone || settings.whatsappNumber, `Hello ${o.customer.name}, your Bake Art Style order #${o.id} is now ${o.status}.`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 rounded-xl bg-green-50 py-2 text-center text-xs font-bold text-green-700"
-                  >
-                    WhatsApp customer
-                  </a>
-                  <button
-                    onClick={() => navigator.clipboard?.writeText(o.id)}
-                    className="rounded-xl bg-ink/5 px-3 py-2 text-xs font-bold text-ink/55"
-                  >
-                    Copy ID
-                  </button>
                 </div>
               </div>
             ))}
-            {filteredOrders.length === 0 && <div className="text-center py-16 text-ink/30 text-sm">No orders yet</div>}
+            {orders.length === 0 && <div className="text-center py-16 text-ink/30 text-sm">No orders yet</div>}
           </div>
         )}
 
@@ -336,7 +245,7 @@ export function AdminPanel({ onClose }: Props) {
                   </div>
                 ))}
                 <div>
-                  <label className="text-[10px] font-bold text-ink/50 uppercase">Price (৳)</label>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Price (₹)</label>
                   <input type="number" className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
                     value={editProduct.price}
                     onChange={(e) => setEditProduct({ ...editProduct, price: +e.target.value })} />
@@ -473,139 +382,6 @@ export function AdminPanel({ onClose }: Props) {
           </div>
         )}
 
-        {/* Customers */}
-        {tab === 'customers' && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-white p-4">
-                <p className="text-xl font-black text-coral">{customers.length}</p>
-                <p className="text-xs font-bold text-ink">Customers</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4">
-                <p className="text-xl font-black text-coral">{formatINR(customers.reduce((s, c) => s + c.totalSpent, 0))}</p>
-                <p className="text-xs font-bold text-ink">Total spent</p>
-              </div>
-            </div>
-            {customersLoading && <div className="text-center py-8 text-ink/40 text-sm">Loading customers...</div>}
-            {!customersLoading && customers.map((c) => {
-              const customerOrders = orders
-                .filter((o) =>
-                  (c.phone && o.customer.phone === c.phone) ||
-                  (c.email && o.customer.email === c.email) ||
-                  (!c.phone && !c.email && o.customer.name === c.name)
-                )
-                .slice(0, 4);
-
-              return (
-                <div key={c.id} className="rounded-2xl bg-white p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-coral-50 text-coral">
-                      {c.avatar ? <img src={c.avatar} alt="" className="h-full w-full rounded-full object-cover" /> : <Users className="h-5 w-5" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-ink">{c.name}</p>
-                      <p className="truncate text-[11px] text-ink/45">{c.email || 'No email'} {c.phone ? `· ${c.phone}` : ''}</p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[9px] font-bold text-ink/45 uppercase">{c.source}</span>
-                        <span className="rounded-full bg-coral/10 px-2 py-0.5 text-[9px] font-bold text-coral">{c.orderCount} orders</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-coral">{formatINR(c.totalSpent)}</p>
-                      {c.lastOrderDate > 0 && <p className="text-[9px] text-ink/35">{new Date(c.lastOrderDate).toLocaleDateString('en-BD')}</p>}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 rounded-xl bg-cream p-3">
-                    <p className="mb-2 text-[10px] font-bold uppercase text-ink/40">Customer info is saved from checkout orders + logged-in profiles</p>
-                    {customerOrders.length > 0 ? customerOrders.map((o) => (
-                      <div key={o.id} className="flex items-center justify-between border-b border-ink/5 py-1.5 last:border-0">
-                        <div>
-                          <p className="text-[11px] font-bold text-ink">#{o.id}</p>
-                          <p className="text-[9px] text-ink/40">{new Date(o.createdAt).toLocaleDateString('en-BD')} · {o.status}</p>
-                        </div>
-                        <p className="text-xs font-black text-coral">{formatINR(o.total)}</p>
-                      </div>
-                    )) : <p className="text-[11px] text-ink/40">No order history found</p>}
-                  </div>
-
-                  {c.phone && (
-                    <a
-                      href={waLink(c.phone, `Hello ${c.name}, this is Bake Art Style.`)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 block rounded-xl bg-green-50 py-2 text-center text-xs font-bold text-green-700"
-                    >
-                      WhatsApp customer
-                    </a>
-                  )}
-                </div>
-              );
-            })}
-            {!customersLoading && customers.length === 0 && <div className="text-center py-16 text-ink/30 text-sm">No customers yet</div>}
-          </div>
-        )}
-
-        {/* Zones */}
-        {tab === 'zones' && (
-          <div className="space-y-4">
-            <div className="rounded-2xl bg-white p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-ink">Delivery zone gating</p>
-                  <p className="text-[11px] text-ink/45">Checkout location check on/off</p>
-                </div>
-                <button
-                  onClick={() => updateSettings({ deliveryZonesEnabled: !settings.deliveryZonesEnabled })}
-                  className={`h-7 w-12 rounded-full transition-colors ${settings.deliveryZonesEnabled ? 'bg-coral' : 'bg-ink/20'}`}
-                >
-                  <div className={`m-1 h-5 w-5 rounded-full bg-white transition-transform ${settings.deliveryZonesEnabled ? 'translate-x-5' : ''}`} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(settings.allowedZones ?? []).map((z) => (
-                  <span key={z} className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink">
-                    <MapPin className="h-3 w-3 text-coral" /> {z}
-                    <button onClick={() => updateSettings({ allowedZones: (settings.allowedZones ?? []).filter((x) => x !== z) })} className="text-ink/50">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <input
-                  value={newZone}
-                  onChange={(e) => setNewZone(e.target.value)}
-                  placeholder="Add zone..."
-                  className="h-11 flex-1 rounded-xl border border-ink/10 bg-cream px-3 text-xs text-ink focus:outline-none"
-                />
-                <button
-                  onClick={() => {
-                    const zone = newZone.trim();
-                    if (!zone) return;
-                    if (!(settings.allowedZones ?? []).some((z) => z.toLowerCase() === zone.toLowerCase())) {
-                      updateSettings({ allowedZones: [...(settings.allowedZones ?? []), zone] });
-                    }
-                    setNewZone('');
-                  }}
-                  className="rounded-xl bg-coral px-4 text-xs font-bold text-white"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <label className="text-[10px] font-bold uppercase text-ink/50">Out-of-zone message</label>
-              <textarea
-                value={settings.outOfZoneMessage ?? ''}
-                onChange={(e) => updateSettings({ outOfZoneMessage: e.target.value })}
-                rows={3}
-                className="mt-1 w-full resize-none rounded-xl border border-ink/10 bg-cream p-3 text-xs text-ink focus:outline-none"
-              />
-            </div>
-          </div>
-        )}
-
         {/* Settings */}
         {tab === 'settings' && (
           <div className="space-y-4">
@@ -613,8 +389,8 @@ export function AdminPanel({ onClose }: Props) {
               { label: 'Admin Email', field: 'adminEmail' as const, type: 'email' },
               { label: 'Admin PIN', field: 'adminPin' as const, type: 'password' },
               { label: 'WhatsApp Number', field: 'whatsappNumber' as const, type: 'text' },
-              { label: 'bKash/Nagad Number', field: 'upiId' as const, type: 'text' },
-              { label: 'Delivery Fee (৳)', field: 'deliveryFee' as const, type: 'number' },
+              { label: 'UPI ID', field: 'upiId' as const, type: 'text' },
+              { label: 'Delivery Fee (₹)', field: 'deliveryFee' as const, type: 'number' },
               { label: 'Delivery Estimate', field: 'deliveryEstimate' as const, type: 'text' },
               { label: 'Promo Code', field: 'promoCode' as const, type: 'text' },
               { label: 'Promo Discount (%)', field: 'promoPercent' as const, type: 'number' },
@@ -631,30 +407,6 @@ export function AdminPanel({ onClose }: Props) {
                   })} />
               </div>
             ))}
-            <div className="rounded-2xl bg-white p-4 space-y-2">
-              <div>
-                <p className="text-xs font-bold text-ink">Custom cake flavour images</p>
-                <p className="text-[10px] text-ink/40">Normal/default cake image URL per flavour</p>
-              </div>
-              {['Chocolate', 'Vanilla', 'Red Velvet', 'Butterscotch', 'Strawberry', 'Pistachio'].map((flavour) => (
-                <div key={flavour}>
-                  <label className="text-[10px] font-bold text-ink/50 uppercase">{flavour} image URL</label>
-                  <input
-                    className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
-                    value={localSettings.customFlavorImages?.[flavour] ?? ''}
-                    onChange={(e) => setLocalSettings({
-                      ...localSettings,
-                      customFlavorImages: {
-                        ...(localSettings.customFlavorImages ?? {}),
-                        [flavour]: e.target.value,
-                      },
-                    })}
-                    placeholder={`/cakes/${flavour.toLowerCase().replace(/ /g, '-')}.png`}
-                  />
-                </div>
-              ))}
-            </div>
-
             <div className="flex items-center justify-between py-1">
               <label className="text-xs font-bold text-ink">Promo Enabled</label>
               <button onClick={() => setLocalSettings({ ...localSettings, promoEnabled: !localSettings.promoEnabled })}
