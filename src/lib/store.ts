@@ -1,6 +1,54 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CartItem, Order } from '../types';
+import { supabase } from './supabase';
+import { isSupabaseConfigured } from './utils';
+
+
+const REMOTE_SETTINGS_KEY = 'site_settings';
+
+const pushBrowserRouteState = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ bakeArtRoute: true, t: Date.now() }, '');
+    }
+  } catch {
+    // ignore history errors
+  }
+};
+
+const readRemoteSetting = async <T,>(key: string): Promise<T | null> => {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data?.value as T) ?? null;
+  } catch (e) {
+    console.warn(`Remote setting read failed: ${key}`, e);
+    return null;
+  }
+};
+
+const writeRemoteSetting = async (key: string, value: unknown): Promise<void> => {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert(
+        { key, value, updated_at: new Date().toISOString() },
+        { onConflict: 'key' }
+      );
+
+    if (error) throw error;
+  } catch (e) {
+    console.warn(`Remote setting write failed: ${key}`, e);
+  }
+};
 
 // ===== App view routing =====
 export type Tab = 'home' | 'categories' | 'orders' | 'profile';
@@ -63,9 +111,18 @@ export const useUI = create<UIState>((set, get) => ({
       tab: v.name === 'tabs' ? v.tab : get().tab,
       history: v.name === 'splash' ? [] : get().history,
     }),
-  setTab: (tab) => set({ tab, view: { name: 'tabs', tab }, history: [] }),
+  setTab: (tab) => {
+    const cur = get().view;
+    if (!(cur.name === 'tabs' && cur.tab === tab)) pushBrowserRouteState();
+    set({
+      tab,
+      view: { name: 'tabs', tab },
+      history: cur.name === 'splash' ? [] : [...get().history, cur].slice(-20),
+    });
+  },
   go: (v) => {
     const cur = get().view;
+    pushBrowserRouteState();
     set({
       view: v,
       tab: v.name === 'tabs' ? v.tab : get().tab,
@@ -152,6 +209,7 @@ export const useCart = create<CartState>()(
 // ===== Orders =====
 type OrderState = {
   orders: Order[];
+  setOrders: (orders: Order[]) => void;
   placeOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status'>) => Order;
   setOrderStatus: (id: string, status: Order['status']) => void;
 };
@@ -160,6 +218,9 @@ export const useOrders = create<OrderState>()(
   persist(
     (set) => ({
       orders: [],
+
+      setOrders: (orders) => set({ orders }),
+
       placeOrder: (data) => {
         const o: Order = {
           ...data,
@@ -167,13 +228,57 @@ export const useOrders = create<OrderState>()(
           createdAt: Date.now(),
           status: 'placed',
         };
+
         set((s) => ({ orders: [o, ...s.orders] }));
         useUI.getState().addNotification('✅ Order placed', `Order #${o.id} has been placed successfully.`);
+
+        if (isSupabaseConfigured()) {
+          const user = useAuthStore.getState().user;
+          const isUuid =
+            !!user?.id &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+
+          void supabase.from('orders').insert({
+            id: o.id,
+            user_id: isUuid ? user!.id : null,
+            customer_name: o.customer.name,
+            customer_phone: o.customer.phone,
+            customer_address: o.customer.address,
+            district: o.customer.city,
+            delivery_date: o.delivery.date,
+            delivery_time: o.delivery.time,
+            payment_method: o.payment,
+            items: o.items,
+            subtotal: o.subtotal,
+            discount: 0,
+            delivery_fee: o.deliveryFee,
+            total: o.total,
+            status: o.status,
+            created_at: new Date(o.createdAt).toISOString(),
+          }).then(({ error }) => {
+            if (error) console.warn('Remote order insert failed:', error.message);
+          });
+        }
+
         return o;
       },
+
       setOrderStatus: (id, status) => {
-        set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)) }));
+        set((s) => ({
+          orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
+        }));
+
         useUI.getState().addNotification('📦 Order updated', `Order #${id} status changed to ${status}.`);
+
+        if (isSupabaseConfigured()) {
+          void supabase
+            .from('orders')
+            .update({ status })
+            .eq('id', id)
+            .then(({ error }) => {
+              if (error) console.warn('Remote order status update failed:', error.message);
+            });
+        }
       },
     }),
     { name: 'bakeart-orders' }
@@ -236,16 +341,24 @@ export const useAuthStore = create<AuthState>()(
 // ── Settings Store ─────────────────────────────────────────
 type SettingsState = {
   settings: SiteSettings;
+  loadRemoteSettings: () => Promise<void>;
   updateSettings: (patch: Partial<SiteSettings>) => void;
 };
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       settings: DEFAULT_SETTINGS,
+      loadRemoteSettings: async () => {
+        const remote = await readRemoteSetting<Partial<SiteSettings>>(REMOTE_SETTINGS_KEY);
+        if (remote) {
+          set({ settings: { ...DEFAULT_SETTINGS, ...get().settings, ...remote } });
+        }
+      },
       updateSettings: (patch) =>
         set((s) => {
           const next = { ...s.settings, ...patch };
+          void writeRemoteSetting(REMOTE_SETTINGS_KEY, next);
           return { settings: next };
         }),
     }),
