@@ -4,28 +4,10 @@ import type { CartItem, Order } from '../types';
 import { supabase } from './supabase';
 import { isSupabaseConfigured } from './utils';
 
-const pushBrowserRouteState = () => {
-  try {
-    if (typeof window !== 'undefined') {
-      window.history.pushState({ bakeArtRoute: true, t: Date.now() }, '');
-    }
-  } catch {
-    // ignore history errors
-  }
-};
 
 
 const REMOTE_SETTINGS_KEY = 'site_settings';
 
-const pushBrowserRouteState = () => {
-  try {
-    if (typeof window !== 'undefined') {
-      window.history.pushState({ bakeArtRoute: true, t: Date.now() }, '');
-    }
-  } catch {
-    // ignore history errors
-  }
-};
 
 const readRemoteSetting = async <T,>(key: string): Promise<T | null> => {
   if (!isSupabaseConfigured()) return null;
@@ -57,6 +39,16 @@ const writeRemoteSetting = async (key: string, value: unknown): Promise<void> =>
     if (error) throw error;
   } catch (e) {
     console.warn(`Remote setting write failed: ${key}`, e);
+  }
+};
+
+const pushBrowserRouteState = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ bakeArtRoute: true, t: Date.now() }, '');
+    }
+  } catch {
+    // ignore history errors
   }
 };
 
