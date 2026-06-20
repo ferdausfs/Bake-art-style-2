@@ -234,7 +234,6 @@ export const useOrders = create<OrderState>()(
         set((s) => ({ orders: [o, ...s.orders] }));
         useUI.getState().addNotification('✅ Order placed', `Order #${o.id} has been placed successfully.`);
 
-        // Remote insert: admin/other browsers can see this order.
         if (isSupabaseConfigured()) {
           const user = useAuthStore.getState().user;
           const isUuid =

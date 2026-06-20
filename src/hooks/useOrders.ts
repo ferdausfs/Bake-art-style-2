@@ -85,8 +85,7 @@ export function useOrdersHook() {
 
       if (error) throw error;
 
-      const mapped = (data ?? []).map((row) => mapDbOrder(row as DbOrderRow));
-      setOrders(mapped);
+      setOrders((data ?? []).map((row) => mapDbOrder(row as DbOrderRow)));
     } catch (e) {
       console.warn('Orders fetch failed, using local:', e);
     } finally {
@@ -114,7 +113,6 @@ export function useOrdersHook() {
       Notification.requestPermission();
     }
 
-    // Admin panel open হওয়ার সাথে সাথে একবার refresh
     fetchOrders();
 
     const channel = supabase
@@ -143,7 +141,6 @@ export function useOrdersHook() {
       )
       .subscribe();
 
-    // Fallback polling: realtime miss করলেও 10 sec এর মধ্যে order আসবে
     const timer = window.setInterval(fetchOrders, 10000);
 
     return () => {
