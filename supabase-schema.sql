@@ -142,3 +142,8 @@ $$ language plpgsql;
 create trigger app_settings_updated_at
   before update on app_settings
   for each row execute function update_app_settings_updated_at();
+
+
+-- Enable realtime INSERT/UPDATE events for admin order notifications.
+-- If this says already added, ignore.
+alter publication supabase_realtime add table orders;
