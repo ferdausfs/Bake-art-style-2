@@ -114,6 +114,9 @@ export function useOrdersHook() {
       Notification.requestPermission();
     }
 
+    // Admin panel open হওয়ার সাথে সাথে একবার refresh
+    fetchOrders();
+
     const channel = supabase
       .channel('new-orders-admin')
       .on(
@@ -131,9 +134,16 @@ export function useOrdersHook() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrders();
+        }
+      )
       .subscribe();
 
-    // Fallback polling: realtime না চললেও admin panel order পাবে।
+    // Fallback polling: realtime miss করলেও 10 sec এর মধ্যে order আসবে
     const timer = window.setInterval(fetchOrders, 10000);
 
     return () => {
