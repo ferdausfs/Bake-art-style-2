@@ -25,6 +25,29 @@ const SLOTS = [
   { v: '6pm - 8pm',   hot: false },
 ];
 
+type CustomerProfile = {
+  name?: string;
+  phone?: string;
+  address?: string;
+  district?: string;
+  payment?: typeof PAYMENTS[number]['id'];
+};
+
+const CUSTOMER_PROFILE_KEY = 'bakeart-customer-profile';
+
+function loadCustomerProfile(): CustomerProfile {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_PROFILE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCustomerProfile(profile: Required<CustomerProfile>) {
+  localStorage.setItem(CUSTOMER_PROFILE_KEY, JSON.stringify(profile));
+}
+
 interface Props {
   onBack?: () => void;
 }
@@ -42,15 +65,16 @@ export default function CheckoutScreen({ onBack }: Props) {
   const [showLocationGate, setShowLocationGate] = useState(!locationVerified);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState('');
+  const savedCustomer = loadCustomerProfile();
 
   const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    district: detectedDistrict || 'Comilla',
+    name: savedCustomer.name || '',
+    phone: savedCustomer.phone || '',
+    address: savedCustomer.address || '',
+    district: savedCustomer.district || detectedDistrict || 'Comilla',
     date: new Date().toISOString().slice(0, 10),
     time: '4pm - 6pm',
-    payment: 'cash' as typeof PAYMENTS[number]['id'],
+    payment: (savedCustomer.payment || 'cash') as typeof PAYMENTS[number]['id'],
   });
 
   const subtotal = cartSubtotal(items);
@@ -58,8 +82,23 @@ export default function CheckoutScreen({ onBack }: Props) {
   const total = subtotal + delivery;
 
   const districtOptions = Array.from(
-    new Set([form.district, detectedDistrict, ...BD_DISTRICTS].filter(Boolean) as string[])
+    new Set([form.district, savedCustomer.district, detectedDistrict, ...BD_DISTRICTS].filter(Boolean) as string[])
   );
+
+  const hasSavedCustomer = !!(savedCustomer.name || savedCustomer.phone || savedCustomer.address);
+
+  const applySavedCustomer = () => {
+    const latest = loadCustomerProfile();
+    setForm((prev) => ({
+      ...prev,
+      name: latest.name || prev.name,
+      phone: latest.phone || prev.phone,
+      address: latest.address || prev.address,
+      district: latest.district || prev.district,
+      payment: (latest.payment || prev.payment) as typeof PAYMENTS[number]['id'],
+    }));
+    setGpsError('');
+  };
 
   const buildAddressFromGeo = (data: any) => {
     const a = data?.address ?? {};
@@ -135,6 +174,15 @@ export default function CheckoutScreen({ onBack }: Props) {
   const handleSubmit = () => {
     if (items.length === 0) return;
     if (!form.name || !form.phone || !form.address) return;
+
+    saveCustomerProfile({
+      name: form.name,
+      phone: form.phone,
+      address: form.address,
+      district: form.district,
+      payment: form.payment,
+    });
+
     const o = placeOrder({
       items,
       customer: { name: form.name, phone: form.phone, email: '', address: form.address, city: form.district, pin: '' },
@@ -204,8 +252,27 @@ export default function CheckoutScreen({ onBack }: Props) {
         </Section>
 
         {/* Delivery address */}
-        <Section icon={MapPin} title="ডেলিভারি ঠিকানা">
+        <Section icon={MapPin} title="ডেলিভারি ঠিকানা" badge={hasSavedCustomer ? 'Profile saved' : undefined}>
           <div className="space-y-2.5">
+            {hasSavedCustomer && (
+              <div className="rounded-2xl border border-green-100 bg-green-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-bold text-green-700">Profile থেকে saved info পাওয়া গেছে</p>
+                    <p className="mt-0.5 line-clamp-2 text-[10.5px] text-green-700/75">
+                      {savedCustomer.name || 'নাম নেই'} · {savedCustomer.phone || 'ফোন নেই'} · {savedCustomer.address || 'ঠিকানা নেই'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applySavedCustomer}
+                    className="flex-shrink-0 rounded-xl bg-green-600 px-3 py-2 text-[10.5px] font-bold text-white"
+                  >
+                    Use profile
+                  </button>
+                </div>
+              </div>
+            )}
             <input
               placeholder="আপনার নাম"
               value={form.name}
