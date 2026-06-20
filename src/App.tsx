@@ -22,7 +22,7 @@ import AdminScreen from './screens/AdminScreen';
 export default function App() {
   const { view, tab, chatOpen } = useUI();
   const { user } = useAuthStore();
-  const { settings } = useSettingsStore();
+  const { settings, loadRemoteSettings } = useSettingsStore();
 
   const [authOpen, setAuthOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -31,12 +31,34 @@ export default function App() {
   const tapCount = useRef(0);
   const logoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    void loadRemoteSettings();
+  }, [loadRemoteSettings]);
+
   const normalizeEmail = (email?: string) => email?.trim().toLowerCase() ?? '';
   const isAdminUser = useMemo(() => {
     const userEmail = normalizeEmail(user?.email);
     const allowedAdminEmails = [settings.adminEmail, 'umuhammadiswa@gmail.com'];
     return !!userEmail && allowedAdminEmails.some((email) => normalizeEmail(email) === userEmail);
   }, [user?.email, settings.adminEmail]);
+
+  useEffect(() => {
+    try {
+      window.history.replaceState({ bakeArtRoute: true, t: Date.now() }, '');
+    } catch {
+      // ignore history errors
+    }
+
+    const onPopState = () => {
+      if (adminOpen) { setAdminOpen(false); return; }
+      if (authOpen) { setAuthOpen(false); return; }
+      if (notificationsOpen) { setNotificationsOpen(false); return; }
+      useUI.getState().back();
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [adminOpen, authOpen, notificationsOpen]);
 
   useEffect(() => {
     if (!pendingAdminUnlock || !user) return;

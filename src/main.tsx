@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
 
-// Service worker disabled to avoid stale Vercel/browser cache.
+// Service worker disabled to avoid stale Vercel/browser cache during active development.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.getRegistrations?.().then((regs) => {
