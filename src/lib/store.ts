@@ -210,6 +210,7 @@ export const useCart = create<CartState>()(
 // ===== Orders =====
 type OrderState = {
   orders: Order[];
+  setOrders: (orders: Order[]) => void;
   placeOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status'>) => Order;
   setOrderStatus: (id: string, status: Order['status']) => void;
 };
@@ -218,6 +219,8 @@ export const useOrders = create<OrderState>()(
   persist(
     (set) => ({
       orders: [],
+      setOrders: (orders) => set({ orders }),
+
       placeOrder: (data) => {
         const o: Order = {
           ...data,
@@ -225,13 +228,51 @@ export const useOrders = create<OrderState>()(
           createdAt: Date.now(),
           status: 'placed',
         };
+
         set((s) => ({ orders: [o, ...s.orders] }));
         useUI.getState().addNotification('✅ Order placed', `Order #${o.id} has been placed successfully.`);
+
+        // Fire-and-forget remote insert so admin/other browsers can see the order.
+        if (isSupabaseConfigured()) {
+          const user = useAuthStore.getState().user;
+          const uuid = user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)
+            ? user.id
+            : null;
+
+          void supabase.from('orders').insert({
+            id: o.id,
+            user_id: uuid,
+            customer_name: o.customer.name,
+            customer_phone: o.customer.phone,
+            customer_address: o.customer.address,
+            district: o.customer.city,
+            delivery_date: o.delivery.date,
+            delivery_time: o.delivery.time,
+            payment_method: o.payment,
+            items: o.items,
+            subtotal: o.subtotal,
+            discount: 0,
+            delivery_fee: o.deliveryFee,
+            total: o.total,
+            status: o.status,
+            created_at: new Date(o.createdAt).toISOString(),
+          }).then(({ error }) => {
+            if (error) console.warn('Remote order insert failed:', error.message);
+          });
+        }
+
         return o;
       },
+
       setOrderStatus: (id, status) => {
         set((s) => ({ orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)) }));
         useUI.getState().addNotification('📦 Order updated', `Order #${id} status changed to ${status}.`);
+
+        if (isSupabaseConfigured()) {
+          void supabase.from('orders').update({ status }).eq('id', id).then(({ error }) => {
+            if (error) console.warn('Remote order status update failed:', error.message);
+          });
+        }
       },
     }),
     { name: 'bakeart-orders' }
