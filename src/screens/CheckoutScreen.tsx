@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield, Navigation, Loader2 } from 'lucide-react';
 import {
   useCart, useOrders, useUI, formatINR,
   cartSubtotal, qualifiesForFreeDelivery, standardDeliveryFee,
@@ -33,9 +33,15 @@ export default function CheckoutScreen({ onBack }: Props) {
   const { items, clear } = useCart();
   const { placeOrder } = useOrders();
   const { back, go } = useUI();
-  const { verified: locationVerified, district: detectedDistrict } = useLocation();
+  const {
+    verified: locationVerified,
+    district: detectedDistrict,
+    setLocation,
+  } = useLocation();
 
   const [showLocationGate, setShowLocationGate] = useState(!locationVerified);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState('');
 
   const [form, setForm] = useState({
     name: '',
@@ -50,6 +56,81 @@ export default function CheckoutScreen({ onBack }: Props) {
   const subtotal = cartSubtotal(items);
   const delivery = items.length === 0 ? 0 : (qualifiesForFreeDelivery(subtotal) ? 0 : standardDeliveryFee);
   const total = subtotal + delivery;
+
+  const districtOptions = Array.from(
+    new Set([form.district, detectedDistrict, ...BD_DISTRICTS].filter(Boolean) as string[])
+  );
+
+  const buildAddressFromGeo = (data: any) => {
+    const a = data?.address ?? {};
+    const parts = [
+      a.house_number,
+      a.road,
+      a.neighbourhood,
+      a.suburb,
+      a.village || a.town || a.city,
+      a.district || a.county || a.state_district,
+      a.state,
+      a.postcode,
+      a.country,
+    ].filter(Boolean);
+
+    return parts.length ? parts.join(', ') : (data?.display_name || '');
+  };
+
+  const districtFromGeo = (data: any) => {
+    const a = data?.address ?? {};
+    return (
+      a.city ||
+      a.town ||
+      a.village ||
+      a.district ||
+      a.county ||
+      a.state_district ||
+      a.state ||
+      ''
+    );
+  };
+
+  const useGPSAddress = async () => {
+    setGpsError('');
+
+    if (!('geolocation' in navigator)) {
+      setGpsError('আপনার ব্রাউজারে GPS/location support নেই।');
+      return;
+    }
+
+    setGpsLoading(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+      });
+
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { 'Accept-Language': 'bn,en' } }
+      );
+      const data = await res.json();
+      const gpsAddress = buildAddressFromGeo(data);
+      const gpsDistrict = districtFromGeo(data);
+
+      setLocation(gpsDistrict || form.district, lat, lng);
+      setForm((prev) => ({
+        ...prev,
+        address: gpsAddress || prev.address,
+        district: gpsDistrict || prev.district,
+      }));
+    } catch (e) {
+      setGpsError(e instanceof Error ? e.message : 'GPS দিয়ে ঠিকানা পাওয়া যায়নি। আবার চেষ্টা করুন বা নিজে লিখুন।');
+    } finally {
+      setGpsLoading(false);
+    }
+  };
 
   const handleSubmit = () => {
     if (items.length === 0) return;
@@ -67,7 +148,6 @@ export default function CheckoutScreen({ onBack }: Props) {
 
   const handleBack = onBack ?? back;
 
-  // Location gate before checkout (payment step) — must verify zone first
   if (showLocationGate) {
     return (
       <LocationGate
@@ -97,7 +177,6 @@ export default function CheckoutScreen({ onBack }: Props) {
       <Header title="চেকআউট" onBack={handleBack} />
 
       <div className="no-scrollbar flex-1 overflow-y-auto px-5 pb-32 pt-1">
-        {/* Items */}
         <Section icon={MapPin} title="অর্ডারের আইটেম">
           <div className="space-y-2.5">
             {items.slice(0, 3).map((it, i) => (
@@ -122,7 +201,6 @@ export default function CheckoutScreen({ onBack }: Props) {
           </div>
         </Section>
 
-        {/* Delivery address */}
         <Section icon={MapPin} title="ডেলিভারি ঠিকানা">
           <div className="space-y-2.5">
             <input
@@ -131,32 +209,56 @@ export default function CheckoutScreen({ onBack }: Props) {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="h-11 w-full rounded-xl border border-ink-50 bg-white px-3 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
             />
+
             <input
               placeholder="মোবাইল নম্বর (01XXXXXXXXX)"
+              inputMode="tel"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="h-11 w-full rounded-xl border border-ink-50 bg-white px-3 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
             />
+
+            <div className="rounded-2xl border border-coral/15 bg-coral-50/35 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[12px] font-bold text-ink">ঠিকানা দিন</p>
+                  <p className="text-[10.5px] leading-relaxed text-ink-200">
+                    নিজে লিখতে পারেন অথবা GPS দিয়ে auto-fill করতে পারেন। পরে চাইলে edit করা যাবে।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={useGPSAddress}
+                  disabled={gpsLoading}
+                  className="flex h-10 flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-coral px-3 text-[11px] font-bold text-white disabled:opacity-60"
+                >
+                  {gpsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
+                  {gpsLoading ? 'GPS...' : 'GPS'}
+                </button>
+              </div>
+              {gpsError && <p className="mt-2 text-[10.5px] font-medium text-red-500">{gpsError}</p>}
+            </div>
+
             <textarea
-              placeholder="সম্পূর্ণ ঠিকানা (বাসা/রোড/এলাকা)"
+              placeholder="সম্পূর্ণ ঠিকানা লিখুন (বাসা/রোড/এলাকা) অথবা GPS চাপুন"
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              rows={2}
-              className="w-full rounded-xl border border-ink-50 bg-white px-3 py-2.5 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15 resize-none"
+              rows={3}
+              className="w-full resize-none rounded-xl border border-ink-50 bg-white px-3 py-2.5 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
             />
+
             <select
               value={form.district}
               onChange={(e) => setForm({ ...form, district: e.target.value })}
               className="h-11 w-full rounded-xl border border-ink-50 bg-white px-3 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
             >
-              {BD_DISTRICTS.map((d) => (
+              {districtOptions.map((d) => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
         </Section>
 
-        {/* Date & time */}
         <Section icon={Clock} title="ডেলিভারি সময়">
           <input
             type="date"
@@ -186,7 +288,6 @@ export default function CheckoutScreen({ onBack }: Props) {
           </div>
         </Section>
 
-        {/* Payment */}
         <Section icon={Wallet} title="পেমেন্ট পদ্ধতি">
           <div className="space-y-2">
             {PAYMENTS.map((p) => (
@@ -218,7 +319,6 @@ export default function CheckoutScreen({ onBack }: Props) {
           </div>
         </Section>
 
-        {/* Bill */}
         <Section title="বিল বিবরণ" className="!p-0">
           <div className="space-y-2 px-4 py-4 text-[13px]">
             <Row label={`সাবটোটাল (${items.length} আইটেম)`} value={formatINR(subtotal)} />
@@ -241,7 +341,6 @@ export default function CheckoutScreen({ onBack }: Props) {
         </div>
       </div>
 
-      {/* Sticky CTA */}
       <div className="absolute right-0 bottom-0 left-0 z-30 border-t border-ink-50/80 bg-white/95 px-5 pt-3 pb-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div>
