@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, Send } from 'lucide-react';
-import { useAuthStore, useOrders, useSettingsStore } from '../lib/store';
+import { useSettingsStore } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { waLink } from '../lib/utils';
 
@@ -34,8 +34,6 @@ export function ChatBot({ embedded = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { settings } = useSettingsStore();
   const { products } = useProducts();
-  const { orders } = useOrders();
-  const { user } = useAuthStore();
 
   useEffect(() => {
     if (embedded) setTimeout(() => inputRef.current?.focus(), 200);
@@ -116,63 +114,6 @@ export function ChatBot({ embedded = false }: Props) {
     return `Payment options 💳\n• bKash\n• Nagad\n• Cash on Delivery\n\nদাম শুরু ${formatBDT(minPrice)} থেকে। Delivery fee ${formatBDT(settings.deliveryFee)}। ${settings.promoEnabled ? `Promo code ${settings.promoCode} দিলে ${settings.promoPercent}% discount পেতে পারেন।` : ''}`;
   };
 
-  const getSavedCustomer = (): { name?: string; phone?: string; address?: string; district?: string; payment?: string } => {
-    try {
-      return JSON.parse(localStorage.getItem('bakeart-customer-profile') || '{}');
-    } catch {
-      return {};
-    }
-  };
-
-  const myOrders = () => {
-    const saved = getSavedCustomer();
-    const userName = user?.name?.trim().toLowerCase();
-    const userEmail = user?.email?.trim().toLowerCase();
-    const phone = saved.phone?.trim();
-    const savedName = saved.name?.trim().toLowerCase();
-
-    const matched = orders.filter((o) => {
-      const orderName = o.customer.name?.trim().toLowerCase();
-      const orderEmail = o.customer.email?.trim().toLowerCase();
-      return (
-        (!!phone && o.customer.phone === phone) ||
-        (!!userEmail && orderEmail === userEmail) ||
-        (!!savedName && orderName === savedName) ||
-        (!!userName && orderName === userName)
-      );
-    });
-
-    return (matched.length ? matched : orders).slice().sort((a, b) => b.createdAt - a.createdAt);
-  };
-
-  const orderStatusText = (rawQuestion: string) => {
-    const normalizedQuestion = rawQuestion.toLowerCase();
-    const idMatch = normalizedQuestion.match(/bas[-\s]?\d{3,}/i);
-    const cleanId = idMatch?.[0]?.replace(/[-\s]/g, '').toUpperCase();
-
-    const list = cleanId
-      ? orders.filter((o) => o.id.toUpperCase() === cleanId)
-      : myOrders();
-
-    if (list.length === 0) {
-      return `আপনার কোনো saved order এখনো পাচ্ছি না। 😔\n\nযদি order করে থাকেন, Order ID লিখুন — যেমন BAS123456। Profile → Orders থেকেও status দেখতে পারবেন।`;
-    }
-
-    const latest = list[0];
-    const itemText = latest.items.map((i) => `${i.name} ×${i.quantity}`).join(', ');
-    const statusMap: Record<string, string> = {
-      placed: 'অর্ডার প্লেস হয়েছে',
-      confirmed: 'অর্ডার confirm হয়েছে',
-      baking: 'কেক bake হচ্ছে',
-      ready: 'কেক ready',
-      out: 'ডেলিভারির জন্য বের হয়েছে',
-      delivered: 'ডেলিভারি complete হয়েছে',
-      cancelled: 'অর্ডার cancel হয়েছে',
-    };
-
-    return `আপনার latest order status 📦\n\nOrder #${latest.id} — ${statusMap[latest.status] ?? latest.status}\nItems: ${itemText}\nTotal: ${formatBDT(latest.total)}\nDelivery: ${latest.delivery.date} · ${latest.delivery.time}\n\nআরও detail দেখতে Orders tab → Open tracking চাপুন।`;
-  };
-
   const ruleBasedReply = (question: string): { text: string; matched: boolean } => {
     const q = normalize(question);
 
@@ -212,13 +153,6 @@ export function ChatBot({ embedded = false }: Props) {
           : 'এখনো product list load হয়নি। একটু পরে আবার চেষ্টা করুন।',
         matched: true,
       };
-    }
-
-    if (
-      has(q, ['track', 'tracking', 'ট্র্যাক', 'status', 'স্ট্যাটাস', 'order id', 'খবর', 'khobor', 'khabar', 'koi', 'কই']) ||
-      (has(q, ['order', 'অর্ডার']) && has(q, ['amar', 'আমার', 'my', 'খবর', 'khobor', 'khabar', 'status', 'স্ট্যাটাস']))
-    ) {
-      return { text: orderStatusText(question), matched: true };
     }
 
     if (has(q, ['order', 'অর্ডার', 'kinbo', 'kivabe kinbo', 'কিনব', 'checkout', 'cart', 'কার্ট'])) {

@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-// আপনার .env ফাইল থেকে কীগুলো নিবে
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const url = import.meta.env.VITE_SUPABASE_URL as string;
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+if (!url || !key) {
+  console.warn('⚠️ Supabase env vars missing — running in localStorage-only (demo) mode');
+}
+
+export const supabase = createClient(
+  url || 'https://placeholder.supabase.co',
+  key || 'placeholder'
+);
