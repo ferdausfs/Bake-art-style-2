@@ -190,6 +190,7 @@ button { -webkit-tap-highlight-color: transparent; }
   background: rgba(255,255,255,0.92);
   backdrop-filter: saturate(180%) blur(22px);
   -webkit-backdrop-filter: saturate(180%) blur(22px);
+  border: 1px solid rgba(255,255,255,0.5);
 }
 
 /* ===== Decorative confetti for splash ===== */

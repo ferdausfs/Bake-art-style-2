@@ -15,7 +15,7 @@ export default function NotificationsSheet({ open, onClose }: { open: boolean; o
         onClick={onClose}
       />
       <div
-        className="relative max-h-[76%] w-full overflow-hidden rounded-t-[28px] bg-cream anim-up"
+        className="relative max-h-[76%] w-full overflow-hidden rounded-t-[28px] glass-strong anim-up"
         style={{ boxShadow: '0 -20px 60px -20px rgba(26,19,17,.25)' }}
       >
         <header className="flex items-center justify-between bg-white px-5 py-4">

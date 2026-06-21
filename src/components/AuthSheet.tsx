@@ -48,7 +48,7 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
     return (
       <>
         <div className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm" onClick={onClose} />
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] bg-[var(--color-cream)] rounded-t-3xl p-6 shadow-2xl">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] glass-strong rounded-t-3xl p-6 shadow-2xl">
           <div className="w-10 h-1 bg-[var(--color-ink)]/10 rounded-full mx-auto mb-5" />
           <div className="text-center mb-6">
             <div className="w-16 h-16 rounded-full bg-[var(--color-coral)]/10 flex items-center justify-center text-3xl mx-auto mb-3">
@@ -131,7 +131,7 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] bg-[var(--color-cream)] rounded-t-3xl shadow-2xl">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] glass-strong rounded-t-3xl shadow-2xl">
         {/* Handle */}
         <div className="w-10 h-1 bg-[var(--color-ink)]/10 rounded-full mx-auto mt-3" />
 

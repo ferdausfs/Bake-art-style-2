@@ -364,7 +364,7 @@ export default function ProfileScreen({ onAuthOpen }: Props) {
             className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm"
             onClick={() => setCustomerOpen(false)}
           />
-          <div className="fixed bottom-0 left-1/2 z-[61] max-h-[88vh] w-full max-w-[420px] -translate-x-1/2 overflow-hidden rounded-t-3xl bg-cream shadow-2xl">
+          <div className="fixed bottom-0 left-1/2 z-[61] max-h-[88vh] w-full max-w-[420px] -translate-x-1/2 overflow-hidden rounded-t-3xl glass-strong shadow-2xl">
             <div className="w-10 h-1 bg-ink/10 rounded-full mx-auto mt-3" />
 
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
@@ -475,7 +475,7 @@ export default function ProfileScreen({ onAuthOpen }: Props) {
             className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm"
             onClick={() => setContactOpen(false)}
           />
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] bg-cream rounded-t-3xl shadow-2xl">
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] glass-strong rounded-t-3xl shadow-2xl">
             <div className="w-10 h-1 bg-ink/10 rounded-full mx-auto mt-3" />
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-ink">যোগাযোগ ও সহায়তা</h2>

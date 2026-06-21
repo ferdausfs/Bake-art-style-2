@@ -79,7 +79,7 @@ export function AdminPanel({ onClose }: Props) {
     };
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-cream rounded-3xl p-8 w-full max-w-xs text-center">
+        <div className="glass-strong rounded-3xl p-8 w-full max-w-xs text-center">
           <div className="text-4xl mb-3">🔐</div>
           <h2 className="font-display text-lg font-bold text-ink mb-1">Admin Panel</h2>
           <p className="text-xs text-ink/50 mb-4">Enter your PIN</p>

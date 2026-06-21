@@ -268,7 +268,7 @@ export default function HomeScreen({
       {activeNotice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-5 backdrop-blur-sm anim-fade">
           <div
-            className="w-full max-w-sm overflow-hidden rounded-[28px] bg-white p-6 shadow-2xl anim-scale"
+            className="w-full max-w-sm overflow-hidden rounded-[28px] glass-strong p-6 shadow-2xl anim-scale"
             style={{ boxShadow: '0 20px 60px -10px rgba(0,0,0,0.15)' }}
           >
             <div className="text-4xl">📢</div>
