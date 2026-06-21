@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Truck, Shield } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Sparkles, Truck, Shield } from 'lucide-react';
 import {
   useCart,
   useUI,
@@ -34,24 +34,25 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <div className="flex h-full flex-col bg-cream">
-        <header className="flex flex-shrink-0 items-center justify-between px-5 pt-3 pb-3">
+        <Header title="My cart" onBack={back} />
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <div
+            className="flex h-24 w-24 items-center justify-center rounded-3xl bg-coral-50 text-5xl"
+            style={{ boxShadow: '0 12px 30px -18px rgba(242,94,115,.4)' }}
+          >
+            🛒
+          </div>
+          <h2 className="mt-5 font-display text-[22px] font-bold tracking-tight text-ink">
+            Your cart is empty
+          </h2>
+          <p className="mt-1.5 text-[13px] text-ink-200">
+            Add some delicious cakes to get started.
+          </p>
           <button
             onClick={back}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink transition active:scale-90"
-            style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 6px 16px -10px rgba(26,19,17,.2)' }}
+            className="btn-primary mt-6 flex h-12 items-center gap-2 rounded-2xl px-7 text-[13px] font-bold"
           >
-            <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
-          </button>
-          <h1 className="font-display text-[16px] font-bold tracking-tight text-ink">My Cart</h1>
-          <div className="w-10" />
-        </header>
-
-        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-          <div className="text-5xl">🛒</div>
-          <h2 className="mt-4 font-display text-[20px] font-bold text-ink">Your cart is empty</h2>
-          <p className="mt-1 text-[12px] text-ink-200">Add delicious cakes from shop to start order.</p>
-          <button onClick={back} className="btn-primary mt-5 h-12 rounded-2xl px-6 text-[13px] font-bold">
-            Browse cakes
+            <Sparkles className="h-4 w-4" /> Browse cakes
           </button>
         </div>
       </div>
@@ -60,22 +61,7 @@ export default function CartScreen() {
 
   return (
     <div className="flex h-full flex-col bg-cream">
-      <header className="flex flex-shrink-0 items-center justify-between px-5 pt-3 pb-3">
-        <button
-          onClick={back}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink transition active:scale-90"
-          style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 6px 16px -10px rgba(26,19,17,.2)' }}
-        >
-          <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
-        </button>
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-[16px] font-bold tracking-tight text-ink">My Cart</h1>
-          <span className="rounded-full bg-coral-50 px-2 py-0.5 text-[11px] font-bold text-coral">
-            {items.length}
-          </span>
-        </div>
-        <div className="w-10" />
-      </header>
+      <Header title="My cart" onBack={back} badge={`${items.length}`} />
 
       <div className="no-scrollbar flex-1 overflow-y-auto px-5 pb-44 pt-1">
         {/* Free delivery nudge */}
@@ -116,37 +102,47 @@ export default function CartScreen() {
               <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-cream">
                 <img src={item.image} alt="" className="h-full w-full object-cover" />
               </div>
-              <div className="flex-1">
-                <div className="line-clamp-1 text-[12.5px] font-bold text-ink">
-                  {item.name}
-                </div>
-                <div className="text-[10.5px] text-ink-200">
-                  {item.size} · ×{item.quantity}
-                </div>
-              </div>
-              <div className="flex flex-col items-end justify-between">
-                <button
-                  onClick={() => remove(idx)}
-                  className="text-ink-100 transition hover:text-red-500"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <div className="flex items-center rounded-full border border-ink-50 bg-white p-0.5">
+              <div className="flex flex-1 flex-col">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <h4 className="line-clamp-1 text-[14px] font-bold text-ink">{item.name}</h4>
+                    <div className="mt-0.5 text-[11px] text-ink-200">
+                      {item.size} · {item.flavor}
+                    </div>
+                    {item.message && (
+                      <div className="mt-0.5 line-clamp-1 text-[10.5px] italic text-coral">
+                        "{item.message}"
+                      </div>
+                    )}
+                  </div>
                   <button
-                    onClick={() => setQty(idx, item.quantity - 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-ink-200 transition hover:bg-cream"
+                    onClick={() => remove(idx)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-ink-200 transition active:bg-rose-50 active:text-rose-600"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                  <span className="w-7 text-center text-[12.5px] font-bold tabular text-ink">
-                    {item.quantity}
+                </div>
+                <div className="mt-auto flex items-center justify-between pt-1">
+                  <div className="flex items-center rounded-full border border-ink-50 bg-white p-0.5">
+                    <button
+                      onClick={() => setQty(idx, item.quantity - 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-ink-200 transition hover:bg-cream"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-7 text-center text-[12.5px] font-bold tabular text-ink">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => setQty(idx, item.quantity + 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-ink-200 transition hover:bg-cream"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <span className="font-display text-[15px] font-bold tabular text-ink">
+                    {formatINR(item.price * item.quantity)}
                   </span>
-                  <button
-                    onClick={() => setQty(idx, item.quantity + 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-ink-200 transition hover:bg-cream"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
                 </div>
               </div>
             </article>
@@ -250,6 +246,29 @@ export default function CartScreen() {
         </button>
       </div>
     </div>
+  );
+}
+
+function Header({ title, onBack, badge }: { title: string; onBack: () => void; badge?: string }) {
+  return (
+    <header className="flex flex-shrink-0 items-center justify-between px-5 pt-3 pb-3">
+      <button
+        onClick={onBack}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink transition active:scale-90"
+        style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 6px 16px -10px rgba(26,19,17,.2)' }}
+      >
+        <ArrowLeft className="h-[20px] w-[20px]" strokeWidth={2} />
+      </button>
+      <div className="flex items-center gap-2">
+        <h1 className="font-display text-[16px] font-bold tracking-tight text-ink">{title}</h1>
+        {badge && (
+          <span className="rounded-full bg-coral-50 px-2 py-0.5 text-[11px] font-bold text-coral">
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="w-10" />
+    </header>
   );
 }
 
