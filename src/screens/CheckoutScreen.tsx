@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield, Navigation, Loader2 } from 'lucide-react';
 import {
   useCart, useOrders, useUI, formatINR,
   cartSubtotal, standardDeliveryFee,
   useLocation,
   useSettingsStore,
+  useAuthStore,
 } from '../lib/store';
 import { LocationGate } from '../components/LocationGate';
 
@@ -32,11 +33,14 @@ interface Props {
 
 export default function CheckoutScreen({ onBack }: Props) {
   const { items, clear } = useCart();
-  const { placeOrder } = useOrders();
+  const { placeOrder, orders } = useOrders();
   const { back, go, promoDiscount } = useUI();
   const { verified: locationVerified, district: detectedDistrict } = useLocation();
+  const user = useAuthStore((s) => s.user);
 
   const [showLocationGate, setShowLocationGate] = useState(!locationVerified);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState('');
 
   const [form, setForm] = useState({
     name: '',
@@ -48,6 +52,42 @@ export default function CheckoutScreen({ onBack }: Props) {
     payment: 'cash' as typeof PAYMENTS[number]['id'],
   });
 
+  // Autofill name, phone and address for logged in users
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => {
+        const next = { ...prev };
+        if (!next.name && user.name) {
+          next.name = user.name;
+        }
+        
+        const recentOrder = orders.find(
+          (o) =>
+            o.userId === user.id ||
+            (user.email && o.customer?.email?.toLowerCase() === user.email.toLowerCase())
+        );
+
+        if (recentOrder) {
+          if (!next.phone && recentOrder.customer?.phone) {
+            next.phone = recentOrder.customer.phone;
+          }
+          if (!next.address && recentOrder.customer?.address) {
+            next.address = recentOrder.customer.address;
+          }
+          if (recentOrder.customer?.city) {
+            const matchedDistrict = BD_DISTRICTS.find(
+              (d) => d.toLowerCase() === recentOrder.customer.city.toLowerCase()
+            );
+            if (matchedDistrict) {
+              next.district = matchedDistrict;
+            }
+          }
+        }
+        return next;
+      });
+    }
+  }, [user, orders]);
+
   const { settings } = useSettingsStore();
   const currentDeliveryFee = settings.deliveryFee !== undefined ? settings.deliveryFee : standardDeliveryFee;
   const currentFreeThreshold = settings.freeDeliveryThreshold !== undefined ? settings.freeDeliveryThreshold : 999;
@@ -57,6 +97,51 @@ export default function CheckoutScreen({ onBack }: Props) {
   const delivery = items.length === 0 ? 0 : (isFreeDelivery ? 0 : currentDeliveryFee);
   const discountAmount = promoDiscount > 0 ? (subtotal * promoDiscount) / 100 : 0;
   const total = subtotal + delivery - discountAmount;
+
+  const handleLocate = async () => {
+    setLocating(true);
+    setLocateError('');
+    try {
+      if (!navigator.geolocation) {
+        throw new Error('জিপিএস সমর্থিত নয়');
+      }
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+      });
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+      if (!r.ok) {
+        throw new Error('সার্ভার থেকে এড্রেস পাওয়া যায়নি');
+      }
+      const data = await r.json();
+      const city =
+        data.address?.city ||
+        data.address?.town ||
+        data.address?.district ||
+        data.address?.county ||
+        data.address?.state_district ||
+        '';
+      const addressText = data.display_name || city || '';
+
+      setForm((prev) => {
+        const next = { ...prev };
+        next.address = addressText;
+        const detectedCity = (city || addressText).toLowerCase();
+        const matchedDistrict = BD_DISTRICTS.find(
+          (d) => detectedCity.includes(d.toLowerCase()) || addressText.toLowerCase().includes(d.toLowerCase())
+        );
+        if (matchedDistrict) {
+          next.district = matchedDistrict;
+        }
+        return next;
+      });
+    } catch (e: any) {
+      console.warn('Geolocation failed:', e);
+      setLocateError('লোকেশন শনাক্ত করা যায়নি, অনুগ্রহ করে ম্যানুয়ালি লিখুন।');
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleSubmit = () => {
     if (items.length === 0) return;
@@ -144,6 +229,27 @@ export default function CheckoutScreen({ onBack }: Props) {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="h-11 w-full rounded-xl border border-ink-50 bg-white px-3 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
             />
+            
+            {/* GPS Button */}
+            <div className="flex flex-col gap-1.5 pt-0.5">
+              <button
+                type="button"
+                onClick={handleLocate}
+                disabled={locating}
+                className="flex items-center justify-center gap-1.5 self-start rounded-full bg-coral-50/60 px-3.5 py-1.5 text-[11px] font-bold text-coral transition hover:bg-coral-50 active:scale-95 disabled:opacity-50"
+              >
+                {locating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Navigation className="h-3 w-3" />
+                )}
+                {locating ? 'লোকেশন খোঁজা হচ্ছে...' : 'বর্তমান অবস্থান ব্যবহার করুন'}
+              </button>
+              {locateError && (
+                <span className="text-[11px] text-red-500 font-semibold px-1">{locateError}</span>
+              )}
+            </div>
+
             <textarea
               placeholder="সম্পূর্ণ ঠিকানা (বাসা/রোড/এলাকা)"
               value={form.address}

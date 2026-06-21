@@ -96,6 +96,8 @@ export const banners: Banner[] = [
     image: '/banners/banner1.jpg',
     tag: 'Shop Now',
     color: '#FCEFF1',
+    type: 'new_item',
+    productId: 'p1',
   },
   {
     id: 'b2',
@@ -104,6 +106,8 @@ export const banners: Banner[] = [
     image: '/banners/banner2.jpg',
     tag: 'Order Now',
     color: '#FFE2E7',
+    type: 'new_item',
+    productId: 'p2',
   },
   {
     id: 'b3',
@@ -112,6 +116,8 @@ export const banners: Banner[] = [
     image: '/banners/banner3.jpg',
     tag: 'Customize',
     color: '#FCE4E6',
+    type: 'new_item',
+    productId: 'p3',
   },
 ];
 

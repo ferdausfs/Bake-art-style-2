@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUI, useUser, useOrders } from '../lib/store';
-import { categories, banners } from '../lib/data';
+import { categories } from '../lib/data';
 import { useProducts } from '../hooks/useProducts';
+import { useBanners } from '../hooks/useBanners';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import ProductCard from '../components/ProductCard';
 import SectionHeader from '../components/SectionHeader';
 import BrandLogo from '../components/BrandLogo';
 import OccasionIcon from '../components/OccasionIcon';
+import type { Banner } from '../types';
 
 const ALL_CAT = { id: 'all' as const, name: 'All', icon: '✨', color: '#FFE2E7' };
 
@@ -23,18 +25,22 @@ export default function HomeScreen({
   const { wishlist, toggleWish } = useUser();
   const { orders } = useOrders();
   const { products } = useProducts();
+  const { banners } = useBanners();
 
   const [bannerIdx, setBannerIdx] = useState(0);
   const [search, setSearch] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeNotice, setActiveNotice] = useState<Banner | null>(null);
 
   const trending = products
     .filter((p) => p.bestseller || p.newArrival)
     .slice(0, 8);
 
   useEffect(() => {
+    if (banners.length === 0) return;
     const t = setInterval(() => setBannerIdx((i) => (i + 1) % banners.length), 5500);
     return () => clearInterval(t);
-  }, []);
+  }, [banners.length]);
 
   return (
     <div className="flex h-full flex-col bg-cream">
@@ -57,73 +63,94 @@ export default function HomeScreen({
         </div>
 
         {/* Hero carousel */}
-        <div className="mt-5 px-5 anim-up delay-1">
-          <div
-            className="relative overflow-hidden rounded-[28px] bg-white"
-            style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 18px 50px -28px rgba(242,94,115,.35)' }}
-          >
-            <div className="relative aspect-[16/11] w-full overflow-hidden">
-              {banners.map((b, i) => (
-                <div
-                  key={b.id}
-                  className={`absolute inset-0 transition-opacity duration-700 ${
-                    i === bannerIdx ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                  }`}
-                >
-                  <img
-                    src={b.image}
-                    alt={b.title}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
-                  <div className="absolute inset-0 flex flex-col justify-end p-5">
-                    <span className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase backdrop-blur-md">
-                      <Sparkles className="h-2.5 w-2.5" /> {b.tag}
-                    </span>
-                    <h3 className="font-display text-[24px] font-bold leading-tight tracking-tight text-white">
-                      {b.title}
-                    </h3>
-                    <p className="mt-1 text-[12.5px] leading-snug text-white/85">{b.subtitle}</p>
-                    <button
-                      onClick={() => go({ name: 'product', productId: products[0]?.id || 'p1' })}
-                      className="mt-3.5 inline-flex h-10 w-fit items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-coral transition active:scale-95"
-                    >
-                      Order now
-                      <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              <button
-                onClick={() => setBannerIdx((i) => (i - 1 + banners.length) % banners.length)}
-                className="absolute top-1/2 left-3 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur transition active:scale-95 md:flex"
-                aria-label="Previous"
-              >
-                <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
-              </button>
-              <button
-                onClick={() => setBannerIdx((i) => (i + 1) % banners.length)}
-                className="absolute top-1/2 right-3 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur transition active:scale-95 md:flex"
-                aria-label="Next"
-              >
-                <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-              </button>
-
-              <div className="absolute right-0 bottom-3 left-0 z-20 flex justify-center gap-1.5">
-                {banners.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setBannerIdx(i)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === bannerIdx ? 'w-6 bg-white shadow' : 'w-1.5 bg-white/50'
+        {banners.length > 0 && (
+          <div className="mt-5 px-5 anim-up delay-1">
+            <div
+              className="relative overflow-hidden rounded-[28px] bg-white"
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 18px 50px -28px rgba(242,94,115,.35)' }}
+            >
+              <div className="relative aspect-[16/11] w-full overflow-hidden">
+                {banners.map((b, i) => (
+                  <div
+                    key={b.id}
+                    className={`absolute inset-0 transition-opacity duration-700 ${
+                      i === bannerIdx ? 'opacity-100 z-10' : 'opacity-0 z-0'
                     }`}
-                  />
+                  >
+                    <img
+                      src={b.image}
+                      alt={b.title}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-5">
+                      <span className="mb-2 inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase backdrop-blur-md">
+                        <Sparkles className="h-2.5 w-2.5" /> {b.tag}
+                      </span>
+                      <h3 className="font-display text-[24px] font-bold leading-tight tracking-tight text-white">
+                        {b.title}
+                      </h3>
+                      <p className="mt-1 text-[12.5px] leading-snug text-white/85">{b.subtitle}</p>
+                      <button
+                        onClick={() => {
+                          if (b.type === 'discount') {
+                            if (b.promoCode) {
+                              navigator.clipboard?.writeText(b.promoCode);
+                              setCopiedId(b.id);
+                              setTimeout(() => setCopiedId(null), 1500);
+                            }
+                          } else if (b.type === 'notice') {
+                            setActiveNotice(b);
+                          } else {
+                            // new_item
+                            go({ name: 'product', productId: b.productId || products[0]?.id || 'p1' });
+                          }
+                        }}
+                        className="mt-3.5 inline-flex h-10 w-fit items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-coral transition active:scale-95 shadow"
+                      >
+                        {b.type === 'discount' ? (
+                          copiedId === b.id ? 'Copied!' : `Copy: ${b.promoCode || 'CODE'}`
+                        ) : (
+                          <>
+                            {b.tag || 'Order now'}
+                            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.5} />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 ))}
+
+                <button
+                  onClick={() => setBannerIdx((i) => (i - 1 + banners.length) % banners.length)}
+                  className="absolute top-1/2 left-3 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur transition active:scale-95 md:flex"
+                  aria-label="Previous"
+                >
+                  <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+                <button
+                  onClick={() => setBannerIdx((i) => (i + 1) % banners.length)}
+                  className="absolute top-1/2 right-3 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur transition active:scale-95 md:flex"
+                  aria-label="Next"
+                >
+                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+
+                <div className="absolute right-0 bottom-3 left-0 z-20 flex justify-center gap-1.5">
+                  {banners.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setBannerIdx(i)}
+                      className={`h-1.5 rounded-full transition-all ${
+                        i === bannerIdx ? 'w-6 bg-white shadow' : 'w-1.5 bg-white/50'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Quick action: order again */}
         {orders.length > 0 && (
@@ -236,6 +263,30 @@ export default function HomeScreen({
           </div>
         </div>
       </div>
+
+      {/* Notice Modal */}
+      {activeNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-5 backdrop-blur-sm anim-fade">
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-[28px] bg-white p-6 shadow-2xl anim-scale"
+            style={{ boxShadow: '0 20px 60px -10px rgba(0,0,0,0.15)' }}
+          >
+            <div className="text-4xl">📢</div>
+            <h3 className="mt-4 font-display text-[20px] font-bold tracking-tight text-ink">
+              {activeNotice.title}
+            </h3>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-200">
+              {activeNotice.noticeText}
+            </p>
+            <button
+              onClick={() => setActiveNotice(null)}
+              className="btn-primary mt-6 flex h-11 w-full items-center justify-center rounded-2xl text-[13px] font-bold"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

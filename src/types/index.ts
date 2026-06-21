@@ -60,6 +60,10 @@ export type Banner = {
   image: string;
   tag: string;
   color: string;
+  type: 'discount' | 'new_item' | 'notice';
+  promoCode?: string;   // used when type === 'discount'
+  productId?: string;   // used when type === 'new_item'
+  noticeText?: string;  // used when type === 'notice'
 };
 
 export type Category = {

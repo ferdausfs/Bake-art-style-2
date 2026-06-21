@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useUI, useAuthStore, useSettingsStore } from './lib/store';
+import { useUI, useAuthStore, useSettingsStore, pushBrowserRouteState } from './lib/store';
 import { isSupabaseConfigured } from './lib/utils';
 import PhoneFrame from './components/PhoneFrame';
 import BottomTabBar from './components/BottomTabBar';
@@ -36,6 +36,27 @@ export default function App() {
     if (isSupabaseConfigured()) {
       useSettingsStore.getState().loadRemoteSettings();
     }
+  }, []);
+
+  useEffect(() => {
+    // 1. Initial push to trap history
+    pushBrowserRouteState();
+
+    // 2. Popstate listener to handle back gestures
+    const handlePopState = () => {
+      const { history: uiHistory, back: uiBack } = useUI.getState();
+      
+      if (uiHistory.length > 0) {
+        uiBack();
+        pushBrowserRouteState();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const normalizeEmail = (email?: string) => email?.trim().toLowerCase() ?? '';

@@ -5,12 +5,13 @@ import { useOrdersHook } from '../hooks/useOrders';
 import { useGallery } from '../hooks/useGallery';
 import { useReviews } from '../hooks/useReviews';
 import { useCustomers } from '../hooks/useCustomers';
+import { useBanners } from '../hooks/useBanners';
 import { useSettingsStore, useUI } from '../lib/store';
 import { DEFAULT_SETTINGS } from '../lib/data';
 import { formatINR, waLink } from '../lib/utils';
-import type { Product, Order } from '../types';
+import type { Product, Order, Banner } from '../types';
 
-type AdminTab = 'dashboard' | 'orders' | 'products' | 'gallery' | 'reviews' | 'customers' | 'zones' | 'settings';
+type AdminTab = 'dashboard' | 'orders' | 'products' | 'banners' | 'gallery' | 'reviews' | 'customers' | 'zones' | 'settings';
 
 const STATUS_LABELS: Record<string, string> = {
   placed: '🕐 Placed', confirmed: '✅ Confirmed',
@@ -25,6 +26,11 @@ const EMPTY_PRODUCT = {
   bestseller: false,
 };
 
+const EMPTY_BANNER = {
+  id: '', title: '', subtitle: '', image: '', tag: 'Shop Now', color: '#FFE2E7',
+  type: 'new_item' as const, promoCode: '', productId: '', noticeText: '',
+};
+
 interface Props { onClose: () => void; }
 
 export function AdminPanel({ onClose }: Props) {
@@ -34,6 +40,7 @@ export function AdminPanel({ onClose }: Props) {
   const { gallery, saveGalleryItem, deleteGalleryItem, uploadGalleryImage } = useGallery();
   const { reviews, approveReview, deleteReview } = useReviews();
   const { customers, loading: customersLoading } = useCustomers();
+  const { banners, saveBanner, deleteBanner, uploadBannerImage } = useBanners();
   const { clearNewOrders } = useUI();
 
   const [pinInput, setPinInput] = useState('');
@@ -41,13 +48,16 @@ export function AdminPanel({ onClose }: Props) {
   const [pinError, setPinError] = useState(false);
   const [tab, setTab] = useState<AdminTab>('dashboard');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editBanner, setEditBanner] = useState<Banner | null>(null);
   const [localSettings, setLocalSettings] = useState(settings);
   const [imgUploading, setImgUploading] = useState(false);
+  const [bannerImgUploading, setBannerImgUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [newGalleryCaption, setNewGalleryCaption] = useState('');
   const [newZone, setNewZone] = useState('');
   const [orderFilter, setOrderFilter] = useState<'all' | Order['status']>('all');
   const productImgRef = useRef<HTMLInputElement>(null);
+  const bannerImgRef = useRef<HTMLInputElement>(null);
   const galleryImgRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -99,6 +109,7 @@ export function AdminPanel({ onClose }: Props) {
     { id: 'orders', label: '📋 Orders', badge: pendingCount },
     { id: 'products', label: '🧁 Products' },
     { id: 'gallery', label: '🖼️ Gallery' },
+    { id: 'banners', label: '🖼️ Banners' },
     { id: 'reviews', label: '⭐ Reviews', badge: reviews.filter((r) => !r.approved).length },
     { id: 'customers', label: '👥 Customers', badge: customers.length },
     { id: 'zones', label: '📍 Zones' },
@@ -402,6 +413,122 @@ export function AdminPanel({ onClose }: Props) {
           </div>
         )}
 
+        {/* Banners */}
+        {tab === 'banners' && (
+          <div className="space-y-3">
+            <button onClick={() => setEditBanner({ ...EMPTY_BANNER, id: `b-${Date.now()}` })}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-coral text-white font-bold text-sm">
+              <Plus className="w-4 h-4" /> Add Banner
+            </button>
+
+            {editBanner && (
+              <div className="bg-white rounded-2xl p-4 space-y-3 border-2 border-coral/30">
+                <p className="font-bold text-sm text-ink">
+                  {banners.find((b) => b.id === editBanner.id) ? 'Edit' : 'New'} Banner
+                </p>
+                {(['title', 'subtitle', 'tag', 'color'] as const).map((f) => (
+                  <div key={f}>
+                    <label className="text-[10px] font-bold text-ink/50 uppercase">{f}</label>
+                    <input className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                      value={String(editBanner[f] ?? '')}
+                      onChange={(e) => setEditBanner({ ...editBanner, [f]: e.target.value })} />
+                  </div>
+                ))}
+                
+                <div>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Type</label>
+                  <select className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                    value={editBanner.type}
+                    onChange={(e) => setEditBanner({ ...editBanner, type: e.target.value as any })}>
+                    <option value="new_item">New Item</option>
+                    <option value="discount">Discount</option>
+                    <option value="notice">Notice</option>
+                  </select>
+                </div>
+
+                {editBanner.type === 'discount' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-ink/50 uppercase">Promo Code</label>
+                    <input className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                      value={editBanner.promoCode ?? ''}
+                      onChange={(e) => setEditBanner({ ...editBanner, promoCode: e.target.value })} />
+                  </div>
+                )}
+
+                {editBanner.type === 'new_item' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-ink/50 uppercase">Product Link</label>
+                    <select className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                      value={editBanner.productId ?? ''}
+                      onChange={(e) => setEditBanner({ ...editBanner, productId: e.target.value })}>
+                      <option value="">Select product...</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {editBanner.type === 'notice' && (
+                  <div>
+                    <label className="text-[10px] font-bold text-ink/50 uppercase">Notice Text</label>
+                    <textarea rows={3} className="w-full mt-0.5 p-3 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none resize-none"
+                      value={editBanner.noticeText ?? ''}
+                      onChange={(e) => setEditBanner({ ...editBanner, noticeText: e.target.value })} />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                  {editBanner.image && <img src={editBanner.image} alt="" className="w-14 h-14 rounded-xl object-cover bg-blush" />}
+                  <div className="flex-1">
+                    <input ref={bannerImgRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      setBannerImgUploading(true);
+                      try { const url = await uploadBannerImage(file); setEditBanner({ ...editBanner, image: url }); }
+                      finally { setBannerImgUploading(false); }
+                    }} />
+                    <button onClick={() => bannerImgRef.current?.click()} disabled={bannerImgUploading}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink/5 text-xs font-bold text-ink disabled:opacity-50">
+                      <ImageIcon className="w-3.5 h-3.5" /> {bannerImgUploading ? 'Uploading...' : 'Upload Image'}
+                    </button>
+                    <input className="mt-1 w-full px-2 py-1 rounded-lg border border-ink/10 text-[10px] text-ink focus:outline-none bg-cream"
+                      placeholder="Or paste image URL"
+                      value={editBanner.image.startsWith('data:') ? '' : editBanner.image}
+                      onChange={(e) => setEditBanner({ ...editBanner, image: e.target.value })} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={async () => { await saveBanner(editBanner); setEditBanner(null); }}
+                    className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl bg-coral text-white font-bold text-xs">
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </button>
+                  <button onClick={() => setEditBanner(null)}
+                    className="flex-1 py-2.5 rounded-xl bg-ink/5 text-ink/60 font-bold text-xs">Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {banners.map((b) => (
+              <div key={b.id} className="bg-white rounded-2xl p-3 flex gap-3 items-center">
+                <img src={b.image} alt={b.title} className="w-14 h-14 rounded-xl object-cover flex-shrink-0 bg-blush" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-ink truncate">{b.title}</p>
+                  <p className="text-xs font-bold text-coral capitalize">{b.type}</p>
+                  <p className="text-[10px] text-ink/40 truncate">{b.subtitle}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button onClick={() => setEditBanner(b)} className="w-8 h-8 rounded-xl bg-ink/5 flex items-center justify-center">
+                    <Edit3 className="w-3.5 h-3.5 text-ink/60" />
+                  </button>
+                  <button onClick={() => deleteBanner(b.id)} className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Gallery */}
         {tab === 'gallery' && (
           <div className="space-y-3">
@@ -431,7 +558,7 @@ export function AdminPanel({ onClose }: Props) {
                     <p className="text-[10px] text-white font-medium truncate">{g.caption}</p>
                   </div>
                   <button onClick={() => deleteGalleryItem(g.id)} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                    <X className="w-3 h-3 text-white" />
+                    <X className="w-3.5 h-3.5 text-white" />
                   </button>
                 </div>
               ))}
@@ -449,7 +576,7 @@ export function AdminPanel({ onClose }: Props) {
                   <p className="font-bold text-sm text-ink">{r.user_name}</p>
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`w-3 h-3 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-ink/20'}`} />
+                      <Star key={i} className={`w-3.5 h-3.5 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-ink/20'}`} />
                     ))}
                   </div>
                 </div>
@@ -464,7 +591,7 @@ export function AdminPanel({ onClose }: Props) {
                   )}
                   <button onClick={() => deleteReview(r.id)}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 text-red-400 text-[10px] font-bold">
-                    <Trash2 className="w-3 h-3" /> Delete
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
                   </button>
                 </div>
               </div>
@@ -567,7 +694,7 @@ export function AdminPanel({ onClose }: Props) {
                   <span key={z} className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink">
                     <MapPin className="h-3 w-3 text-coral" /> {z}
                     <button onClick={() => updateSettings({ allowedZones: (settings.allowedZones ?? []).filter((x) => x !== z) })} className="text-ink/50">
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 h-3.5" />
                     </button>
                   </span>
                 ))}

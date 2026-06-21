@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from './utils';
 
 
 
-const pushBrowserRouteState = () => {
+export const pushBrowserRouteState = () => {
   try {
     if (typeof window !== 'undefined') {
       window.history.pushState({ bakeArtRoute: true, t: Date.now() }, '');
