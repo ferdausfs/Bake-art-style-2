@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { useUI, useUser } from '../lib/store';
-import { products, categories } from '../lib/data';
+import { categories } from '../lib/data';
+import { useProducts } from '../hooks/useProducts';
 import SearchBar from '../components/SearchBar';
 import ProductCard from '../components/ProductCard';
 import OccasionIcon from '../components/OccasionIcon';
@@ -11,6 +12,7 @@ const ALL_CAT = { id: 'all' as const, name: 'All', icon: '✨' };
 export default function CategoriesScreen() {
   const { go } = useUI();
   const { wishlist, toggleWish } = useUser();
+  const { products } = useProducts();
   const [active, setActive] = useState<string>('all');
   const [search, setSearch] = useState('');
 

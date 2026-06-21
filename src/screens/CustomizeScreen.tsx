@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Droplet, Weight, Plus } from 'lucide-react';
 import { useUI, useCart, useSettingsStore, formatINR } from '../lib/store';
-import { products } from '../lib/data';
+import { useProducts } from '../hooks/useProducts';
 
 const STEPS = [
   { id: 'flavour', label: 'Flavour' },
@@ -42,11 +42,12 @@ export default function CustomizeScreen() {
   const { view, back, go } = useUI();
   const { add } = useCart();
   const { settings } = useSettingsStore();
+  const { products } = useProducts();
 
   if (view.name !== 'customize') return null;
 
   const product = view.productId ? products.find((p) => p.id === view.productId) : products[3];
-  const defaultProduct = product ?? products[3];
+  const defaultProduct = product ?? products[3] ?? { id: 'p4', name: 'Custom Cake', image: '/cakes/logo-cake.png', flavors: FLAVOURS };
 
   const flavorImages = {
     ...DEFAULT_FLAVOUR_IMAGES,

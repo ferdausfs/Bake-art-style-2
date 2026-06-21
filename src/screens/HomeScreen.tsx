@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUI, useUser, useOrders } from '../lib/store';
-import { products, categories, banners } from '../lib/data';
+import { categories, banners } from '../lib/data';
+import { useProducts } from '../hooks/useProducts';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import ProductCard from '../components/ProductCard';
@@ -21,6 +22,7 @@ export default function HomeScreen({
   const { go } = useUI();
   const { wishlist, toggleWish } = useUser();
   const { orders } = useOrders();
+  const { products } = useProducts();
 
   const [bannerIdx, setBannerIdx] = useState(0);
   const [search, setSearch] = useState('');
@@ -83,7 +85,7 @@ export default function HomeScreen({
                     </h3>
                     <p className="mt-1 text-[12.5px] leading-snug text-white/85">{b.subtitle}</p>
                     <button
-                      onClick={() => go({ name: 'product', productId: products[0].id })}
+                      onClick={() => go({ name: 'product', productId: products[0]?.id || 'p1' })}
                       className="mt-3.5 inline-flex h-10 w-fit items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-coral transition active:scale-95"
                     >
                       Order now
@@ -218,7 +220,7 @@ export default function HomeScreen({
                 </button>
               </div>
               <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl shadow-lg">
-                <img src={products[3].image} alt="" className="h-full w-full object-cover" />
+                <img src={products[3]?.image || '/cakes/logo-cake.png'} alt="" className="h-full w-full object-cover" />
               </div>
             </div>
           </div>

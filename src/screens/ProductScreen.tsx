@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Heart, Star, ShoppingBag, Check, Share2, Truck, Sparkles, Shield } from 'lucide-react';
 import { useUI, useCart, useUser, formatINR } from '../lib/store';
-import { products } from '../lib/data';
+import { useProducts } from '../hooks/useProducts';
 
 const ADDONS = [
   { id: 'candles', name: 'Birthday candles', price: 20 },
@@ -14,6 +14,7 @@ export default function ProductScreen() {
   const { view, back, go } = useUI();
   const { add } = useCart();
   const { wishlist, toggleWish } = useUser();
+  const { products } = useProducts();
 
   if (view.name !== 'product') return null;
   const product = products.find((p) => p.id === view.productId);
