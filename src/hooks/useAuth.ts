@@ -3,38 +3,9 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { ls, isSupabaseConfigured } from '../lib/utils';
 
-const DEMO_OTP = '123456';
-
-interface PendingOTP { contact: string; otp: string; expires: number; }
-
-const normalizeBDPhone = (contact: string): string => {
-  const digits = contact.replace(/\D/g, '');
-  if (contact.trim().startsWith('+')) return contact.trim();
-  if (digits.startsWith('880')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+88${digits}`;
-  return `+880${digits}`;
-};
-
-const setPendingOTP = (contact: string) => {
-  const record: PendingOTP = { contact, otp: DEMO_OTP, expires: Date.now() + 5 * 60 * 1000 };
-  ls.set('bakeart-pending-otp', record);
-  return DEMO_OTP;
-};
-
-const verifyPendingOTP = (contact: string, otp: string): boolean => {
-  const record = ls.get<PendingOTP | null>('bakeart-pending-otp', null);
-  if (!record) return false;
-  if (record.contact !== contact) return false;
-  if (Date.now() > record.expires) return false;
-  if (record.otp !== otp) return false;
-  ls.set('bakeart-pending-otp', null);
-  return true;
-};
-
 export function useAuth() {
   const { user, login, logout } = useAuthStore();
-  const [sending, setSending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -49,71 +20,65 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, [login]);
 
-  const sendOTP = useCallback(async (contact: string, method: 'phone' | 'email'): Promise<void> => {
-    setSending(true);
+  const signUp = useCallback(async (email: string, password: string, name: string): Promise<{ needsEmailConfirmation: boolean }> => {
+    setLoading(true);
     try {
       if (isSupabaseConfigured()) {
-        if (method === 'phone') {
-          const phone = normalizeBDPhone(contact);
-          const { error } = await supabase.auth.signInWithOtp({ phone });
-          if (error) throw new Error(error.message);
-        } else {
-          const { error } = await supabase.auth.signInWithOtp({
-            email: contact,
-            options: { shouldCreateUser: true },
-          });
-          if (error) throw new Error(error.message);
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: name } },
+        });
+        if (error) throw new Error(error.message);
+        if (data.user) {
+          await supabase.from('profiles').upsert({ id: data.user.id, name, contact: email }, { onConflict: 'id' });
+          if (!data.session) {
+            return { needsEmailConfirmation: true };
+          } else {
+            login({ id: data.user.id, name, email, avatar: '👤' });
+            return { needsEmailConfirmation: false };
+          }
         }
+        return { needsEmailConfirmation: true };
       } else {
-        setPendingOTP(contact);
-        // Demo mode — caller should show "OTP: 123456" toast
+        const accounts = ls.get<Array<any>>('bakeart-local-accounts', []);
+        const existing = accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
+        if (existing) {
+          throw new Error('An account with this email already exists. Please sign in instead.');
+        }
+        const id = `local-${Date.now()}`;
+        const newAcc = { id, name, email, password };
+        ls.set('bakeart-local-accounts', [...accounts, newAcc]);
+        login({ id, name, email, avatar: '👤' });
+        return { needsEmailConfirmation: false };
       }
     } finally {
-      setSending(false);
+      setLoading(false);
     }
-  }, []);
+  }, [login]);
 
-  const verifyOTP = useCallback(async (
-    contact: string,
-    otp: string,
-    method: 'phone' | 'email',
-    name: string
-  ): Promise<void> => {
-    setVerifying(true);
+  const signIn = useCallback(async (email: string, password: string): Promise<void> => {
+    setLoading(true);
     try {
       if (isSupabaseConfigured()) {
-        let userId: string;
-        let userEmail = '';
-        if (method === 'phone') {
-          const phone = normalizeBDPhone(contact);
-          const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' });
-          if (error) throw new Error('Wrong OTP! Please try again.');
-          userId = data.user!.id;
-        } else {
-          const { data, error } = await supabase.auth.verifyOtp({ email: contact, token: otp, type: 'email' });
-          if (error) throw new Error('Wrong OTP! Please try again.');
-          userId = data.user!.id;
-          userEmail = contact;
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw new Error('Wrong email or password.');
+        if (data.user) {
+          const name = data.user.user_metadata?.full_name || email.split('@')[0] || 'User';
+          login({ id: data.user.id, name, email, avatar: '👤' });
         }
-        if (name) {
-          await supabase.from('profiles').upsert({ id: userId, name, contact }, { onConflict: 'id' });
-        }
-        const { data: profile } = await supabase.from('profiles').select('name').eq('id', userId).single();
-        const finalName = profile?.name || name || contact.split('@')[0];
-        login({ id: userId, name: finalName, email: userEmail, avatar: '👤' });
       } else {
-        if (!verifyPendingOTP(contact, otp)) throw new Error(`Wrong OTP! In demo mode, use ${DEMO_OTP}`);
-        const users = ls.get<Array<{ id: string; name: string; contact: string }>>('bakeart-local-users', []);
-        const existing = users.find((u) => u.contact === contact);
-        const userId = existing?.id || `local-${Date.now()}`;
-        const finalName = name || existing?.name || contact;
-        if (!existing) {
-          ls.set('bakeart-local-users', [...users, { id: userId, name: finalName, contact }]);
+        const accounts = ls.get<Array<any>>('bakeart-local-accounts', []);
+        const matched = accounts.find(
+          (a) => a.email.toLowerCase() === email.toLowerCase() && a.password === password
+        );
+        if (!matched) {
+          throw new Error('Wrong email or password.');
         }
-        login({ id: userId, name: finalName, email: contact.includes('@') ? contact : '', avatar: '👤' });
+        login({ id: matched.id, name: matched.name, email, avatar: '👤' });
       }
     } finally {
-      setVerifying(false);
+      setLoading(false);
     }
   }, [login]);
 
@@ -133,5 +98,5 @@ export function useAuth() {
     logout();
   }, [logout]);
 
-  return { user, sending, verifying, sendOTP, verifyOTP, signOut, signInWithGoogle };
+  return { user, loading, signUp, signIn, signOut, signInWithGoogle };
 }

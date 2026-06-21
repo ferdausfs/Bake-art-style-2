@@ -1,10 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { X, Phone, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { isSupabaseConfigured } from '../lib/utils';
-
-type Step = 'input' | 'otp' | 'profile';
-type Method = 'phone' | 'email';
 
 interface Props {
   open: boolean;
@@ -12,29 +8,35 @@ interface Props {
   onSuccess?: () => void;
 }
 
+const validateEmail = (email: string) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 export function AuthSheet({ open, onClose, onSuccess }: Props) {
-  const { user, sending, verifying, sendOTP, verifyOTP, signOut, signInWithGoogle } = useAuth();
-  const [step, setStep] = useState<Step>('input');
-  const [method, setMethod] = useState<Method>('phone');
-  const [contact, setContact] = useState('');
+  const { user, loading, signUp, signIn, signOut, signInWithGoogle } = useAuth();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
+  const [showPassword, setShowPassword] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fallbackName = () => {
-    if (name.trim()) return name.trim();
-    if (method === 'email') return contact.trim().split('@')[0] || 'User';
-    return 'Bake Art User';
-  };
-
   const reset = () => {
-    setStep('input'); setContact(''); setName(''); setOtpDigits(['', '', '', '', '', '']);
+    setMode('signin');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setName('');
+    setShowPassword(false);
+    setNeedsConfirmation(false);
+    setToast(null);
   };
 
   useEffect(() => { if (!open) reset(); }, [open]);
@@ -68,57 +70,53 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
     );
   }
 
-  const handleSend = async () => {
-    if (!contact.trim()) { showToast('Please enter your contact', 'err'); return; }
-    try {
-      await sendOTP(contact.trim(), method);
-      setStep('otp');
-      if (!isSupabaseConfigured()) showToast(`Demo mode — OTP: 123456`, 'ok');
-      else showToast('OTP sent!', 'ok');
-      setTimeout(() => otpRefs.current[0]?.focus(), 150);
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Something went wrong', 'err');
+  const handleSignIn = async () => {
+    if (!email.trim() || !validateEmail(email)) {
+      showToast('Please enter a valid email.', 'err');
+      return;
     }
-  };
-
-  const handleDigit = (i: number, val: string) => {
-    const d = val.replace(/\D/g, '').slice(-1);
-    const next = [...otpDigits]; next[i] = d; setOtpDigits(next);
-    if (d && i < 5) setTimeout(() => otpRefs.current[i + 1]?.focus(), 0);
-  };
-
-  const handleDigitKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[i] && i > 0) {
-      const next = [...otpDigits]; next[i - 1] = ''; setOtpDigits(next);
-      otpRefs.current[i - 1]?.focus();
+    if (password.length < 6) {
+      showToast('Password must be at least 6 characters.', 'err');
+      return;
     }
-  };
-
-  const handleVerify = async () => {
-    const code = otpDigits.join('');
-    if (code.length < 6) { showToast('Enter 6-digit OTP', 'err'); return; }
     try {
-      await verifyOTP(contact.trim(), code, method, fallbackName());
+      await signIn(email.trim(), password);
       showToast('Signed in successfully!', 'ok');
       onSuccess?.();
       onClose();
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Wrong OTP', 'err');
-      setOtpDigits(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
+    } catch (e: any) {
+      showToast(e.message || 'Wrong email or password.', 'err');
     }
   };
 
-  const handleProfile = async () => {
-    if (!name.trim()) { showToast('Please enter your name', 'err'); return; }
+  const handleSignUp = async () => {
+    if (!name.trim()) {
+      showToast('Please enter your name.', 'err');
+      return;
+    }
+    if (!email.trim() || !validateEmail(email)) {
+      showToast('Please enter a valid email.', 'err');
+      return;
+    }
+    if (password.length < 6) {
+      showToast('Password must be at least 6 characters.', 'err');
+      return;
+    }
+    if (password !== confirmPassword) {
+      showToast('Passwords do not match.', 'err');
+      return;
+    }
     try {
-      await verifyOTP(contact.trim(), otpDigits.join(''), method, name.trim());
-      showToast(`Welcome, ${name.trim()}! 🎂`, 'ok');
-      onSuccess?.();
-      onClose();
-    } catch {
-      onSuccess?.();
-      onClose();
+      const res = await signUp(email.trim(), password, name.trim());
+      if (res.needsEmailConfirmation) {
+        setNeedsConfirmation(true);
+      } else {
+        showToast('Account created successfully!', 'ok');
+        onSuccess?.();
+        onClose();
+      }
+    } catch (e: any) {
+      showToast(e.message || 'Failed to create account.', 'err');
     }
   };
 
@@ -141,14 +139,14 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
         <div className="px-6 pt-4 pb-3 flex items-center justify-between">
           <div>
             <h2 className="font-bold text-[var(--color-ink)] text-lg">
-              {step === 'input' && 'Sign In'}
-              {step === 'otp' && 'Verify OTP'}
-              {step === 'profile' && 'Your Name'}
+              {needsConfirmation ? 'Check Your Email' : mode === 'signin' ? 'Sign In' : 'Create Account'}
             </h2>
             <p className="text-xs text-[var(--color-ink)]/50 mt-0.5">
-              {step === 'input' && 'Login or create account'}
-              {step === 'otp' && `Code sent to ${contact}`}
-              {step === 'profile' && 'OTP verified! Set your name'}
+              {needsConfirmation
+                ? `Verification link sent to ${email}`
+                : mode === 'signin'
+                ? 'Sign in to access your orders and settings'
+                : 'Create an account to start ordering delicious cakes'}
             </p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-[var(--color-ink)]/5 flex items-center justify-center">
@@ -164,8 +162,96 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
             </div>
           )}
 
-          {step === 'input' && (
+          {needsConfirmation ? (
+            <div className="text-center py-4 space-y-4">
+              <div className="text-5xl">📩</div>
+              <p className="text-sm text-[var(--color-ink)]/70 font-medium">
+                We have sent a verification link to <span className="font-bold text-[var(--color-ink)]">{email}</span>. Please click the link to confirm your account before signing in.
+              </p>
+              <button
+                onClick={onClose}
+                className="w-full py-3.5 rounded-2xl bg-[var(--color-coral)] text-white font-bold text-sm"
+              >
+                Got it
+              </button>
+            </div>
+          ) : (
             <>
+              {/* Mode toggle */}
+              <div className="flex gap-1 p-1 bg-[var(--color-ink)]/5 rounded-xl">
+                {([
+                  { id: 'signin', label: 'Sign In' },
+                  { id: 'signup', label: 'Create Account' }
+                ] as const).map((m) => (
+                  <button key={m.id} onClick={() => { setMode(m.id); setToast(null); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${mode === m.id ? 'bg-white text-[var(--color-coral)] shadow-sm' : 'text-[var(--color-ink)]/50'}`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Form fields */}
+              {mode === 'signup' && (
+                <input
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
+                  type="text"
+                  placeholder="Your Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSignUp()}
+                />
+              )}
+
+              <input
+                className="w-full px-4 py-3 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (mode === 'signin' ? handleSignIn() : handleSignUp())}
+              />
+
+              <div className="relative">
+                <input
+                  className="w-full px-4 py-3 pr-10 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password (min 6 chars)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (mode === 'signin' ? handleSignIn() : handleSignUp())}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink)]/40 hover:text-[var(--color-ink)]/60"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {mode === 'signup' && (
+                <input
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSignUp()}
+                />
+              )}
+
+              <button onClick={mode === 'signin' ? handleSignIn : handleSignUp} disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-coral)] text-white font-bold text-sm disabled:opacity-60">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? (mode === 'signin' ? 'Signing In...' : 'Creating Account...') : (mode === 'signin' ? 'Sign In' : 'Create Account')}
+              </button>
+
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 h-px bg-[var(--color-ink)]/8" />
+                <span className="text-xs text-[var(--color-ink)]/40">or</span>
+                <div className="flex-1 h-px bg-[var(--color-ink)]/8" />
+              </div>
+
               {/* Google */}
               <button onClick={handleGoogle}
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl border border-[var(--color-ink)]/10 bg-white font-bold text-sm text-[var(--color-ink)]">
@@ -176,100 +262,6 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 Continue with Google
-              </button>
-
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-[var(--color-ink)]/8" />
-                <span className="text-xs text-[var(--color-ink)]/40">or</span>
-                <div className="flex-1 h-px bg-[var(--color-ink)]/8" />
-              </div>
-
-              {/* Method toggle */}
-              <div className="flex gap-1 p-1 bg-[var(--color-ink)]/5 rounded-xl">
-                {(['phone', 'email'] as Method[]).map((m) => (
-                  <button key={m} onClick={() => { setMethod(m); setContact(''); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${method === m ? 'bg-white text-[var(--color-coral)] shadow-sm' : 'text-[var(--color-ink)]/50'}`}>
-                    {m === 'phone' ? <Phone className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
-                    {m === 'phone' ? 'Phone' : 'Email'}
-                  </button>
-                ))}
-              </div>
-
-              <input
-                className="w-full px-4 py-3 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
-                type={method === 'phone' ? 'tel' : 'email'}
-                placeholder={method === 'phone' ? '01XXXXXXXXX' : 'your@email.com'}
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                autoFocus
-              />
-
-              <input
-                className="w-full px-4 py-3 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
-                type="text"
-                placeholder="Your name (optional)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              />
-
-              <button onClick={handleSend} disabled={sending}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-coral)] text-white font-bold text-sm disabled:opacity-60">
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                {sending ? 'Sending...' : 'Send OTP'}
-              </button>
-            </>
-          )}
-
-          {step === 'otp' && (
-            <>
-              <div className="flex justify-center gap-2">
-                {otpDigits.map((d, i) => (
-                  <input key={i}
-                    ref={(el) => { otpRefs.current[i] = el; }}
-                    type="text" inputMode="numeric" maxLength={1}
-                    value={d}
-                    onChange={(e) => handleDigit(i, e.target.value)}
-                    onKeyDown={(e) => handleDigitKey(i, e)}
-                    className={`w-11 h-12 text-center text-xl font-black rounded-xl border-2 bg-white text-[var(--color-ink)] outline-none transition-all ${d ? 'border-[var(--color-coral)]' : 'border-[var(--color-ink)]/10'} focus:border-[var(--color-coral)]`}
-                  />
-                ))}
-              </div>
-              <button onClick={handleVerify} disabled={verifying || otpDigits.join('').length < 6}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-coral)] text-white font-bold text-sm disabled:opacity-60">
-                {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {verifying ? 'Verifying...' : 'Verify OTP ✓'}
-              </button>
-              <div className="flex items-center justify-between text-xs">
-                <button onClick={() => { setStep('input'); setOtpDigits(['', '', '', '', '', '']); }}
-                  className="text-[var(--color-ink)]/50">← Back</button>
-                <button onClick={handleSend} disabled={sending}
-                  className="text-[var(--color-coral)] font-medium disabled:opacity-50">
-                  Resend OTP
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 'profile' && (
-            <>
-              <div className="text-center py-2">
-                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-2xl mx-auto mb-2">✅</div>
-                <p className="text-sm font-bold text-[var(--color-ink)]">OTP Verified!</p>
-              </div>
-              <input
-                className="w-full px-4 py-3 rounded-2xl border border-[var(--color-ink)]/10 bg-white text-[var(--color-ink)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-coral)]/30"
-                type="text"
-                placeholder="Your full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleProfile()}
-                autoFocus
-              />
-              <button onClick={handleProfile}
-                className="w-full py-3.5 rounded-2xl bg-[var(--color-coral)] text-white font-bold text-sm">
-                🎂 Let's Go!
               </button>
             </>
           )}
