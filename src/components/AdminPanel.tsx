@@ -558,7 +558,7 @@ export function AdminPanel({ onClose }: Props) {
                     <p className="text-[10px] text-white font-medium truncate">{g.caption}</p>
                   </div>
                   <button onClick={() => deleteGalleryItem(g.id)} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
-                    <X className="w-3.5 h-3.5 text-white" />
+                    <X className="w-3 h-3 text-white" />
                   </button>
                 </div>
               ))}
@@ -576,7 +576,7 @@ export function AdminPanel({ onClose }: Props) {
                   <p className="font-bold text-sm text-ink">{r.user_name}</p>
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`w-3.5 h-3.5 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-ink/20'}`} />
+                      <Star key={i} className={`w-3 h-3 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-ink/20'}`} />
                     ))}
                   </div>
                 </div>
@@ -591,7 +591,7 @@ export function AdminPanel({ onClose }: Props) {
                   )}
                   <button onClick={() => deleteReview(r.id)}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 text-red-400 text-[10px] font-bold">
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                    <Trash2 className="w-3 h-3" /> Delete
                   </button>
                 </div>
               </div>
@@ -694,7 +694,7 @@ export function AdminPanel({ onClose }: Props) {
                   <span key={z} className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink">
                     <MapPin className="h-3 w-3 text-coral" /> {z}
                     <button onClick={() => updateSettings({ allowedZones: (settings.allowedZones ?? []).filter((x) => x !== z) })} className="text-ink/50">
-                      <X className="h-3.5 h-3.5" />
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 ))}
