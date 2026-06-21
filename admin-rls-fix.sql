@@ -1,4 +1,5 @@
 -- admin-rls-fix.sql
+-- NOTE: app-settings-rls-fix.sql must be run after this file
 -- Run this migration after supabase-schema.sql and repair-orders-table.sql
 
 -- 1. Add is_admin column to profiles if it doesn't exist

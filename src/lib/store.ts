@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 import { isSupabaseConfigured } from './utils';
 
 
-const REMOTE_SETTINGS_KEY = 'site_settings';
+
 
 const pushBrowserRouteState = () => {
   try {
@@ -344,6 +344,8 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
+const ADMIN_ONLY_KEYS = ['adminPin', 'adminEmail', 'geminiApiKey'] as const;
+
 // ── Settings Store ─────────────────────────────────────────
 type SettingsState = {
   settings: SiteSettings;
@@ -356,15 +358,43 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       settings: DEFAULT_SETTINGS,
       loadRemoteSettings: async () => {
-        const remote = await readRemoteSetting<Partial<SiteSettings>>(REMOTE_SETTINGS_KEY);
-        if (remote) {
-          set({ settings: { ...DEFAULT_SETTINGS, ...get().settings, ...remote } });
+        const remoteSite = await readRemoteSetting<Partial<SiteSettings>>('site_settings');
+        const remoteAdmin = await readRemoteSetting<Partial<SiteSettings>>('admin_settings');
+        if (remoteSite || remoteAdmin) {
+          set({
+            settings: {
+              ...DEFAULT_SETTINGS,
+              ...get().settings,
+              ...(remoteSite || {}),
+              ...(remoteAdmin || {}),
+            },
+          });
         }
       },
       updateSettings: (patch) =>
         set((s) => {
           const next = { ...s.settings, ...patch };
-          void writeRemoteSetting(REMOTE_SETTINGS_KEY, next);
+
+          const nonSensitivePart: Partial<SiteSettings> = {};
+          const sensitivePart: Partial<SiteSettings> = {};
+
+          (Object.keys(next) as Array<keyof SiteSettings>).forEach((k) => {
+            if ((ADMIN_ONLY_KEYS as readonly string[]).includes(k)) {
+              (sensitivePart as any)[k] = next[k];
+            } else {
+              (nonSensitivePart as any)[k] = next[k];
+            }
+          });
+
+          const patchHasSensitiveKeys = Object.keys(patch).some((k) => 
+            (ADMIN_ONLY_KEYS as readonly string[]).includes(k)
+          );
+
+          void writeRemoteSetting('site_settings', nonSensitivePart);
+          if (patchHasSensitiveKeys) {
+            void writeRemoteSetting('admin_settings', sensitivePart);
+          }
+
           return { settings: next };
         }),
     }),

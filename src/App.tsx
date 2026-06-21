@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUI, useAuthStore, useSettingsStore } from './lib/store';
+import { isSupabaseConfigured } from './lib/utils';
 import PhoneFrame from './components/PhoneFrame';
 import BottomTabBar from './components/BottomTabBar';
 import SplashScreen from './screens/SplashScreen';
@@ -30,6 +31,12 @@ export default function App() {
   const [pendingAdminUnlock, setPendingAdminUnlock] = useState(false);
   const tapCount = useRef(0);
   const logoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      useSettingsStore.getState().loadRemoteSettings();
+    }
+  }, []);
 
   const normalizeEmail = (email?: string) => email?.trim().toLowerCase() ?? '';
   const isAdminUser = useMemo(() => {

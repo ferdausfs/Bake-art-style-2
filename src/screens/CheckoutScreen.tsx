@@ -33,7 +33,7 @@ interface Props {
 export default function CheckoutScreen({ onBack }: Props) {
   const { items, clear } = useCart();
   const { placeOrder } = useOrders();
-  const { back, go } = useUI();
+  const { back, go, promoDiscount } = useUI();
   const { verified: locationVerified, district: detectedDistrict } = useLocation();
 
   const [showLocationGate, setShowLocationGate] = useState(!locationVerified);
@@ -55,7 +55,8 @@ export default function CheckoutScreen({ onBack }: Props) {
   const subtotal = cartSubtotal(items);
   const isFreeDelivery = subtotal >= currentFreeThreshold;
   const delivery = items.length === 0 ? 0 : (isFreeDelivery ? 0 : currentDeliveryFee);
-  const total = subtotal + delivery;
+  const discountAmount = promoDiscount > 0 ? (subtotal * promoDiscount) / 100 : 0;
+  const total = subtotal + delivery - discountAmount;
 
   const handleSubmit = () => {
     if (items.length === 0) return;
@@ -233,6 +234,13 @@ export default function CheckoutScreen({ onBack }: Props) {
               value={delivery === 0 ? 'ফ্রি' : formatINR(delivery)}
               positive={delivery === 0}
             />
+            {promoDiscount > 0 && (
+              <Row
+                label="প্রোমো ডিসকাউন্ট"
+                value={'-' + formatINR(discountAmount)}
+                positive
+              />
+            )}
             <div className="h-px bg-ink-50" />
             <div className="flex items-center justify-between pt-1">
               <span className="font-display text-[15px] font-bold tracking-tight text-ink">মোট</span>
