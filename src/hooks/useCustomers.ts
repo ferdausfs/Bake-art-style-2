@@ -65,6 +65,7 @@ function aggregateFromOrders(orders: any[], profiles: any[] = []): Customer[] {
   });
 
   orders.forEach((o) => {
+    if (!o) return;
     const key = o.userId || o.user_id || o.customer?.phone || `guest-${o.id}`;
     const prev = map.get(key);
 

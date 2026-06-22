@@ -70,7 +70,7 @@ export default function OrdersScreen() {
           </div>
         ) : (
           <div className="space-y-3">
-            {orders.map((o) => {
+            {orders.filter(Boolean).map((o) => {
               const currentIdx = STATUSES.findIndex((s) => s.key === o.status);
               return (
                 <article

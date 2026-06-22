@@ -137,11 +137,11 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
     .slice(0, 5);
 
   const exportCSV = () => {
-    const rows = orders.map((o) => [
+    const rows = orders.filter(Boolean).map((o) => [
       o.id, o.customer?.name || 'Guest', o.customer?.phone || 'N/A', o.customer?.address || 'N/A',
       o.delivery?.date || '', o.delivery?.time || '',
-      o.items.map((i) => `${i.name}×${i.quantity}`).join('; '),
-      o.subtotal, o.deliveryFee, o.total, o.status, o.payment,
+      o.items?.map((i) => `${i.name}×${i.quantity}`).join('; ') || '',
+      o.subtotal || 0, o.deliveryFee || 0, o.total || 0, o.status || 'placed', o.payment || 'cash',
     ]);
     const csv = [['ID','Name','Phone','Address','Date','Time','Items','Subtotal','Delivery','Total','Status','Payment'], ...rows]
       .map((r) => r.join(',')).join('\n');
@@ -229,7 +229,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
 
             <div className="bg-white rounded-2xl p-4">
               <p className="text-xs font-bold text-ink mb-3">Recent Orders</p>
-            {orders.slice(0, 5).map((o) => (
+            {orders.filter(Boolean).slice(0, 5).map((o) => (
               <div key={o.id} className="flex justify-between items-center py-2 border-b border-ink/5 last:border-0">
                 <div>
                   <p className="text-xs font-bold text-ink">{o.customer?.name || 'Guest'}</p>
@@ -707,12 +707,14 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
               </div>
             </div>
             {customersLoading && <div className="text-center py-8 text-ink/40 text-sm">Loading customers...</div>}
-            {!customersLoading && customers.map((c) => {
+            {!customersLoading && customers.filter(Boolean).map((c) => {
               const customerOrders = orders
                 .filter((o) =>
-                  (c.phone && o.customer?.phone === c.phone) ||
-                  (c.email && o.customer?.email === c.email) ||
-                  (!c.phone && !c.email && o.customer?.name === c.name)
+                  o && (
+                    (c.phone && o.customer?.phone === c.phone) ||
+                    (c.email && o.customer?.email === c.email) ||
+                    (!c.phone && !c.email && o.customer?.name === c.name)
+                  )
                 )
                 .slice(0, 4);
 

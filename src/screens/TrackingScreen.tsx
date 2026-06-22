@@ -27,7 +27,7 @@ export default function TrackingScreen() {
     }
 
     const q = query.toLowerCase().replace(/^#/, '').trim();
-    const found = orders.find((o) => o.id.toLowerCase() === q);
+    const found = orders.find((o) => o && o.id.toLowerCase() === q);
     setMatch(found ?? null);
   }, [query, orders]);
 
