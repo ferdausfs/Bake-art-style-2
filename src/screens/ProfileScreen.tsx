@@ -2,13 +2,15 @@ import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
   ChevronRight, Star, Sparkles, LogIn, X, Save, Check
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useUI, useUser, useOrders, useCart, useAuthStore } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useAuth } from '../hooks/useAuth';
 import BrandLogo from '../components/BrandLogo';
 import { ChatBot } from '../components/ChatBot';
-import { AdminPanel } from '../components/AdminPanel';
+const AdminPanel = lazy(() =>
+  import('../components/AdminPanel').then((m) => ({ default: m.AdminPanel }))
+);
 
 interface Props {
   onAuthOpen?: () => void;
@@ -360,7 +362,9 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
               <h2 className="font-display text-[17px] font-bold text-ink">Admin Dashboard</h2>
               <span className="ml-auto rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">Admin</span>
             </div>
-            <AdminPanel embedded />
+            <Suspense fallback={<div className="py-8 text-center text-xs text-ink/40">Loading admin dashboard...</div>}>
+              <AdminPanel embedded />
+            </Suspense>
           </div>
         )}
 
