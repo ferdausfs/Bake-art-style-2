@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Heart, Star, ShoppingBag, Check, Share2, Truck, Sparkles, Shield } from 'lucide-react';
 import { useUI, useCart, useUser, formatINR } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
@@ -16,8 +16,16 @@ export default function ProductScreen() {
   const { wishlist, toggleWish } = useUser();
   const { products } = useProducts();
 
+  const product = view.name === 'product' ? products.find((p) => p.id === view.productId) : null;
+  const [activeImg, setActiveImg] = useState<string | null>(null);
+
+  // Reset activeImg when product ID changes
+  useEffect(() => {
+    setActiveImg(null);
+  }, [view.name === 'product' ? view.productId : '']);
+
   if (view.name !== 'product') return null;
-  const product = products.find((p) => p.id === view.productId);
+
   if (!product) {
     return (
       <div className="flex h-full flex-col items-center justify-center bg-cream px-6 text-center">
@@ -31,6 +39,7 @@ export default function ProductScreen() {
     );
   }
 
+  const currentImg = activeImg || product.image;
   const [size, setSize] = useState(product.weights[1]?.size ?? product.weights[0]?.size);
   const [addons, setAddons] = useState<Record<string, boolean>>({});
   const wished = wishlist.includes(product.id);
@@ -59,7 +68,7 @@ export default function ProductScreen() {
     <div className="relative flex h-full flex-col bg-blush-50">
       {/* Image header */}
       <div className="relative h-[420px] flex-shrink-0 overflow-hidden rounded-b-[28px] bg-blush-100">
-        <img src={product.image} alt={product.name} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={currentImg} alt={product.name} className="absolute inset-0 h-full w-full object-cover" />
 
         {/* Soft top fade for control legibility */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-blush-100/85 to-transparent" />
@@ -110,6 +119,23 @@ export default function ProductScreen() {
       {/* Sheet */}
       <div className="relative flex-1 overflow-y-auto bg-white">
         <div className="px-5 pt-6 pb-28">
+          {/* Gallery Thumbnail Strip */}
+          {product.gallery && product.gallery.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+              {[product.image, ...product.gallery].map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImg(url)}
+                  className={`flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors ${
+                    currentImg === url ? 'border-coral' : 'border-transparent'
+                  }`}
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Title row */}
           <div className="flex items-start justify-between gap-3">
             <h1 className="flex-1 font-display text-[26px] font-bold leading-[1.1] tracking-tight text-ink">

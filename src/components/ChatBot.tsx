@@ -76,7 +76,7 @@ export function ChatBot({ embedded = false }: Props) {
   };
 
   const appGuideText = () =>
-    `আমি Bake Bot 🤖 — Bake Art Style app-এর সহকারী। আমি এগুলোতে সাহায্য করতে পারি:\n\n` +
+    `আমি BAS 🤖 — Bake Art Style app-এর সহকারী। আমি এগুলোতে সাহায্য করতে পারি:\n\n` +
     `• কেক মেনু, দাম ও বেস্টসেলার দেখানো\n` +
     `• কাস্টম কেক অর্ডার করার ধাপ বলা\n` +
     `• ডেলিভারি জোন/সময়/চার্জ বোঝানো\n` +
@@ -176,8 +176,8 @@ export function ChatBot({ embedded = false }: Props) {
   const ruleBasedReply = (question: string): { text: string; matched: boolean } => {
     const q = normalize(question);
 
-    if (has(q, ['hi', 'hello', 'hey', 'হাই', 'হ্যালো', 'সালাম', 'আসসালামু'])) {
-      return { text: 'হ্যালো! 😊 আমি Bake Bot। কেক অর্ডার, দাম, ডেলিভারি, tracking বা app ব্যবহার নিয়ে যা জানতে চান বলুন।', matched: true };
+    if (has(q, ['hi', 'hello', 'hey', 'হাই', 'হ্যালো', 'সালাম', 'আসসালামু', 'salam', 'assalamu', 'helo', 'helo', 'helllo', 'ki obostha', 'ki khobor', 'ki korcho'])) {
+      return { text: 'হ্যালো! 😊 আমি BAS। কেক অর্ডার, দাম, ডেলিভারি, tracking বা app ব্যবহার নিয়ে যা জানতে চান বলুন।', matched: true };
     }
 
     if (has(q, ['kemon aso', 'কেমন আছ', 'kamon acho', 'kmn aso', 'how are you'])) {
@@ -200,7 +200,7 @@ export function ChatBot({ embedded = false }: Props) {
       return { text: adminGuideText(), matched: true };
     }
 
-    if (has(q, ['menu', 'মেনু', 'cake', 'কেক', 'product', 'প্রোডাক্ট', 'দেখাও'])) {
+    if (has(q, ['menu', 'মেনু', 'cake', 'কেক', 'product', 'প্রোডাক্ট', 'দেখাও', 'kek', 'cake koto', 'ki cake', 'kon cake', 'ki ache', 'product list', 'menu ta', 'dam koto', 'ki pawa jay', 'kemon cake', 'cake show'])) {
       return { text: menuText(), matched: true };
     }
 
@@ -221,7 +221,7 @@ export function ChatBot({ embedded = false }: Props) {
       return { text: orderStatusText(question), matched: true };
     }
 
-    if (has(q, ['order', 'অর্ডার', 'kinbo', 'kivabe kinbo', 'কিনব', 'checkout', 'cart', 'কার্ট'])) {
+    if (has(q, ['order', 'অর্ডার', 'kinbo', 'kivabe kinbo', 'কিনব', 'checkout', 'cart', 'কার্ট', 'order dite', 'order korte', 'kivabe order', 'order process', 'kibhabe', 'ki vabe', 'kemon kore', 'kemon vabe'])) {
       return { text: orderText(), matched: true };
     }
 
@@ -229,7 +229,7 @@ export function ChatBot({ embedded = false }: Props) {
       return { text: `Custom cake করতে পারবেন ✨\n\nProduct খুলুন → Customize চাপুন → size/flavour/topping/message দিন → cart এ add করুন।\n\nআপনি চাইলে cake-এর ওপর নাম/ছোট message লিখতে পারেন।`, matched: true };
     }
 
-    if (has(q, ['delivery', 'ডেলিভারি', 'zone', 'জোন', 'area', 'এলাকা', 'কোথায়', 'kothay', 'লোকেশন'])) {
+    if (has(q, ['delivery', 'ডেলিভারি', 'zone', 'জোন', 'area', 'এলাকা', 'কোথায়', 'kothay', 'লোকেশন', 'deliver', 'pathabo', 'pathate', 'pathano', 'niye jabe', 'niye asbe', 'delivery ki', 'deliver ki', 'kothay daw', 'kothay pathaw'])) {
       return { text: zoneText(), matched: true };
     }
 
@@ -237,7 +237,7 @@ export function ChatBot({ embedded = false }: Props) {
       return { text: `ডেলিভারি estimate: ${settings.deliveryEstimate} 🚗\n\nসময় এলাকা, অর্ডার rush এবং cake customization অনুযায়ী বদলাতে পারে। Same-day order চাইলে যত দ্রুত সম্ভব checkout করুন।`, matched: true };
     }
 
-    if (has(q, ['price', 'দাম', 'tk', 'টাকা', 'payment', 'পেমেন্ট', 'bkash', 'bikash', 'nagad', 'cash'])) {
+    if (has(q, ['price', 'দাম', 'tk', 'টাকা', 'payment', 'পেমেন্ট', 'bkash', 'bikash', 'nagad', 'cash', 'koto taka', 'koto dam', 'daam', 'dam', 'taka koto', 'cost', 'charge', 'fee', 'koye taka', 'koto koye'])) {
       return { text: paymentText(), matched: true };
     }
 
@@ -249,7 +249,7 @@ export function ChatBot({ embedded = false }: Props) {
       return { text: `Wishlist ব্যবহার করতে cake card-এর ❤️ চাপুন। পরে Wishlist screen থেকে saved cake দেখতে, remove করতে বা cart-এ add করতে পারবেন।`, matched: true };
     }
 
-    if (has(q, ['support', 'help', 'সাহায্য', 'মানুষ', 'human', 'whatsapp', 'contact', 'যোগাযোগ'])) {
+    if (has(q, ['support', 'help', 'সাহায্য', 'মানুষ', 'human', 'whatsapp', 'contact', 'যোগাযোগ', 'problem', 'somossa', 'shomossha', 'issue', 'help lagbe', 'help koro', 'darkar', 'dorkar'])) {
       return { text: supportText(), matched: true };
     }
 
@@ -257,15 +257,25 @@ export function ChatBot({ embedded = false }: Props) {
       return { text: `Order cancel/refund বিষয়ে দ্রুত support-এ কথা বলাই ভালো। Cake preparation শুরু হয়ে গেলে cancel policy আলাদা হতে পারে।\n\n${supportText()}`, matched: true };
     }
 
+    // New friendly chat blocks (Task I2)
+    if (has(q, ['khabar', 'khaite', 'khite', 'bhook', 'bhuk', 'hungry', 'kha', 'misti'])) {
+      return { text: "মিষ্টি কিছু খেতে মন চাইলে একটা কেক অর্ডার করুন 😋 আমাদের মেনু দেখতে বলুন!", matched: true };
+    }
+
+    if (has(q, ['birthday', 'janmadin', 'anniversary', 'wedding', 'biye', 'celebration', 'party', 'উৎসব', 'biday', 'congratulation'])) {
+      return { text: "অভিনন্দন! 🎉 বিশেষ দিনকে আরও মিষ্টি করুন একটা custom কেক দিয়ে। Size, flavor, message সব customize করা যায়। চাইলে মেনু দেখাই?", matched: true };
+    }
+
+    if (has(q, ['sundor', 'sundar', 'darun', 'nice', 'good', 'chomotkar', 'chomokdar', 'wow', 'great', 'ভালো', 'চমৎকার', 'সুন্দর', 'দারুণ'])) {
+      return { text: "ধন্যবাদ! 😊 আপনার ভালো লাগলেই আমরা খুশি। আর কিছু জানতে চান?", matched: true };
+    }
+
+    if (has(q, ['bore', 'bored', 'bor lage', 'ektu gopo kori', 'kotha boli', 'time pass', 'notun kiso'])) {
+      return { text: "আমি শুধু বকবক করা জানি 😄 তবে cake নিয়ে গল্প করতে পারি সারাদিন! নতুন কোনো flavor try করতে চান?", matched: true };
+    }
+
     return {
-      text:
-        `আমি পুরোপুরি বুঝতে পারিনি, তবে সাহায্য করতে পারি 😊\n\n` +
-        `আপনি লিখতে পারেন:\n` +
-        `• “কেক মেনু দেখাও”\n` +
-        `• “অর্ডার কীভাবে করবো”\n` +
-        `• “ডেলিভারি কোথায় দাও”\n` +
-        `• “admin panel এ কী আছে”\n` +
-        `• “মানুষের সাথে কথা বলতে চাই”`,
+      text: `হুম, ঠিক বুঝলাম না 😅 একটু অন্যভাবে বলুন? বা এগুলো try করতে পারেন:\n• "কেক মেনু দেখাও"\n• "অর্ডার করতে চাই"\n• "ডেলিভারি কোথায় দাও"\n• "মানুষের সাথে কথা বলব"`,
       matched: false,
     };
   };
@@ -273,7 +283,26 @@ export function ChatBot({ embedded = false }: Props) {
   const callGemini = async (userMsg: string): Promise<string> => {
     const productList = products.map((p) => `• ${p.name} — ${formatBDT(p.price)}: ${p.tagline}`).join('\n');
     const zones = (settings.allowedZones ?? []).join(', ');
-    const systemPrompt = `তুমি "Bake Bot" 🎂, Bake Art Style বেকারির friendly AI assistant। বাংলা/Banglish-এ short helpful উত্তর দাও। সাধারণ কথাও naturally বলবে, কিন্তু business/app info ভুল বানাবে না।\n\nApp features:\n- Shop/Browse products, Wishlist, Cart, Checkout, Order tracking\n- Custom cake: size, flavour, topping, message\n- Admin: 5 tap logo unlock, dashboard, orders, products, gallery, reviews, customers, zones, settings\n\nStore info:\n- Currency: BDT (৳)\n- Delivery estimate: ${settings.deliveryEstimate}, fee: ৳${settings.deliveryFee}\n- Zones: ${zones}\n- Payment: bKash, Nagad, Cash on Delivery\n${settings.promoEnabled ? `- Promo: ${settings.promoCode} = ${settings.promoPercent}% off` : ''}\n\nProducts:\n${productList}\n\nউত্তর 2-6 লাইনের মধ্যে রাখো।`;
+    const systemPrompt = `তুমি "BAS" 🎂, Bake Art Style বেকারির friendly AI assistant। তোমার সাথে যে কোনো বিষয়ে কথা বলা যাবে — সাধারণ গল্প, প্রশ্ন, বা বেকারির ব্যাপার।
+
+কথা বলার ধরন:
+- বাংলা বা Banglish — user যেভাবে লেখে সেভাবে reply করো
+- Short, warm, friendly — 2-5 লাইনের মধ্যে রাখো সাধারণত
+- Misspelled বা ভাঙা বাংলা হলেও বোঝার চেষ্টা করো, জিজ্ঞেস করো না "আপনি কী বললেন" — নিজেই best guess করো
+- Cake/bakery-related হলে নিচের info ব্যবহার করো, না হলে স্বাভাবিকভাবে কথা বলো
+- কখনো "আমি শুধু cake-related প্রশ্নে সাহায্য করতে পারি" বলবে না — সব বিষয়ে friendly থাকো
+
+Store info:
+- Currency: BDT (৳)
+- Delivery estimate: ${settings.deliveryEstimate}, fee: ৳${settings.deliveryFee}
+- Zones: ${zones}
+- Payment: bKash, Nagad, Cash on Delivery
+${settings.promoEnabled ? `- Promo: ${settings.promoCode} = ${settings.promoPercent}% off` : ''}
+
+Products:
+${productList}
+
+উত্তর 2-6 লাইনের মধ্যে রাখো।`;
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -324,7 +353,7 @@ export function ChatBot({ embedded = false }: Props) {
       <div className="flex flex-shrink-0 items-center gap-2 bg-coral px-4 py-3 text-white">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg">🎂</div>
         <div>
-          <p className="text-sm font-bold">Bake Bot সহায়তা</p>
+          <p className="text-sm font-bold">BAS can support/help</p>
           <p className="text-[10px] text-white/70">কেক, অর্ডার, tracking বা সাধারণ প্রশ্ন করুন</p>
         </div>
       </div>
@@ -332,7 +361,7 @@ export function ChatBot({ embedded = false }: Props) {
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
         {messages.length === 0 && (
           <div className="py-4 text-center text-xs text-ink/40">
-            হ্যালো! আমি Bake Bot 😊 লিখুন “ki koro” বা নিচের option বেছে নিন।
+            হ্যালো! আমি BAS 😊 লিখুন “ki koro” বা নিচের option বেছে নিন।
           </div>
         )}
         {messages.map((m, i) => (

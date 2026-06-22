@@ -57,6 +57,7 @@ export function AdminPanel({ onClose }: Props) {
   const [newZone, setNewZone] = useState('');
   const [orderFilter, setOrderFilter] = useState<'all' | Order['status']>('all');
   const productImgRef = useRef<HTMLInputElement>(null);
+  const productGalleryRefs = useRef<HTMLInputElement>(null);
   const bannerImgRef = useRef<HTMLInputElement>(null);
   const galleryImgRef = useRef<HTMLInputElement>(null);
 
@@ -368,7 +369,7 @@ export function AdminPanel({ onClose }: Props) {
                     <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
                       const file = e.target.files?.[0]; if (!file) return;
                       setImgUploading(true);
-                      try { const url = await uploadProductImage(file); setEditProduct({ ...editProduct, image: url }); }
+                      try { const url = await uploadProductImage(file); setEditProduct(prev => prev ? { ...prev, image: url } : prev); }
                       finally { setImgUploading(false); }
                     }} />
                     <button onClick={() => productImgRef.current?.click()} disabled={imgUploading}
@@ -379,6 +380,84 @@ export function AdminPanel({ onClose }: Props) {
                       placeholder="Or paste image URL"
                       value={editProduct.image.startsWith('data:') ? '' : editProduct.image}
                       onChange={(e) => setEditProduct({ ...editProduct, image: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* Additional Images (gallery) */}
+                <div className="space-y-2 border-t border-ink/5 pt-3">
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Additional Images (gallery)</label>
+                  
+                  {/* Thumbnail List */}
+                  {editProduct.gallery && editProduct.gallery.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {editProduct.gallery.map((url, i) => (
+                        <div key={i} className="relative w-12 h-12 rounded-lg overflow-hidden border border-ink/10">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditProduct(prev => {
+                                if (!prev) return null;
+                                const nextGallery = (prev.gallery ?? []).filter((_, idx) => idx !== i);
+                                return { ...prev, gallery: nextGallery };
+                              });
+                            }}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center transition active:scale-90"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Image Button */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={productGalleryRefs}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files ?? []);
+                        if (files.length === 0) return;
+                        setImgUploading(true);
+                        try {
+                          const newUrls: string[] = [];
+                          for (const file of files) {
+                            if (editProduct.gallery && editProduct.gallery.length + newUrls.length >= 4) {
+                              break;
+                            }
+                            const url = await uploadProductImage(file);
+                            newUrls.push(url);
+                          }
+                          setEditProduct(prev => {
+                            if (!prev) return null;
+                            const currentGallery = prev.gallery ?? [];
+                            const combined = [...currentGallery, ...newUrls].slice(0, 4);
+                            return { ...prev, gallery: combined };
+                          });
+                        } finally {
+                          setImgUploading(false);
+                          if (e.target) e.target.value = '';
+                        }
+                      }}
+                    />
+                    
+                    {(editProduct.gallery?.length ?? 0) < 4 ? (
+                      <button
+                        type="button"
+                        onClick={() => productGalleryRefs.current?.click()}
+                        disabled={imgUploading}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink/5 text-xs font-bold text-ink disabled:opacity-50"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        {imgUploading ? 'Uploading...' : 'Add image'}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-ink/40">Max 4 images reached</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -484,7 +563,7 @@ export function AdminPanel({ onClose }: Props) {
                     <input ref={bannerImgRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
                       const file = e.target.files?.[0]; if (!file) return;
                       setBannerImgUploading(true);
-                      try { const url = await uploadBannerImage(file); setEditBanner({ ...editBanner, image: url }); }
+                      try { const url = await uploadBannerImage(file); setEditBanner(prev => prev ? { ...prev, image: url } : prev); }
                       finally { setBannerImgUploading(false); }
                     }} />
                     <button onClick={() => bannerImgRef.current?.click()} disabled={bannerImgUploading}
