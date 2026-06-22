@@ -171,37 +171,46 @@ export function useOrdersHook() {
 
     fetchOrders();
 
-    const channel = supabase
-      .channel('new-orders-admin')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        () => {
-          playBeep();
-          incrementNewOrders();
-          fetchOrders();
+    let channel: any = null;
+    const channelName = `new-orders-admin-${Date.now()}`;
 
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('🎂 New Order!', {
-              body: 'A new order has been placed.',
-            });
+    try {
+      channel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'orders' },
+          () => {
+            playBeep();
+            incrementNewOrders();
+            fetchOrders();
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('🎂 New Order!', {
+                body: 'A new order has been placed.',
+              });
+            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
-        () => {
-          fetchOrders();
-        }
-      )
-      .subscribe();
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'orders' },
+          () => {
+            fetchOrders();
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription failed:', e);
+    }
 
     const timer = window.setInterval(fetchOrders, 10000);
 
     return () => {
       window.clearInterval(timer);
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [fetchOrders, incrementNewOrders]);
 
