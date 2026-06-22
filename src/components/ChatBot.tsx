@@ -117,7 +117,8 @@ export function ChatBot({ embedded = false }: Props) {
 
   const getSavedCustomer = (): { name?: string; phone?: string; address?: string; district?: string; payment?: string } => {
     try {
-      return JSON.parse(localStorage.getItem('bakeart-customer-profile') || '{}');
+      const key = user?.id ? `bakeart-customer-profile-${user.id}` : 'bakeart-customer-profile';
+      return JSON.parse(localStorage.getItem(key) || '{}');
     } catch {
       return {};
     }

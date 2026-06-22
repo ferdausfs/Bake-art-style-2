@@ -48,9 +48,10 @@ const emptyCustomerProfile = (name = ''): CustomerProfile => ({
   payment: 'cash',
 });
 
-function loadCustomerProfile(defaultName = ''): CustomerProfile {
+function loadCustomerProfile(userId: string | undefined, defaultName = ''): CustomerProfile {
   try {
-    const raw = localStorage.getItem(CUSTOMER_PROFILE_KEY);
+    const key = userId ? `${CUSTOMER_PROFILE_KEY}-${userId}` : CUSTOMER_PROFILE_KEY;
+    const raw = localStorage.getItem(key);
     if (!raw) return emptyCustomerProfile(defaultName);
     return { ...emptyCustomerProfile(defaultName), ...JSON.parse(raw) };
   } catch {
@@ -58,8 +59,9 @@ function loadCustomerProfile(defaultName = ''): CustomerProfile {
   }
 }
 
-function saveCustomerProfile(profile: CustomerProfile) {
-  localStorage.setItem(CUSTOMER_PROFILE_KEY, JSON.stringify(profile));
+function saveCustomerProfile(userId: string | undefined, profile: CustomerProfile) {
+  const key = userId ? `${CUSTOMER_PROFILE_KEY}-${userId}` : CUSTOMER_PROFILE_KEY;
+  localStorage.setItem(key, JSON.stringify(profile));
 }
 
 export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
@@ -75,10 +77,10 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   const [customerOpen, setCustomerOpen] = useState(false);
 
   const [savedProfile, setSavedProfile] = useState<CustomerProfile>(() =>
-    loadCustomerProfile(user?.name ?? '')
+    loadCustomerProfile(user?.id, user?.name ?? '')
   );
   const [draftProfile, setDraftProfile] = useState<CustomerProfile>(() =>
-    loadCustomerProfile(user?.name ?? '')
+    loadCustomerProfile(user?.id, user?.name ?? '')
   );
 
   const wishlistItems = products.filter((p) => wishlist.includes(p.id));
@@ -95,10 +97,10 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   );
 
   useEffect(() => {
-    const next = loadCustomerProfile(user?.name ?? '');
+    const next = loadCustomerProfile(user?.id, user?.name ?? '');
     setSavedProfile(next);
     setDraftProfile(next);
-  }, [user?.name]);
+  }, [user?.id, user?.name]);
 
   useEffect(() => {
     setChatOpen(contactOpen || customerOpen);
@@ -106,7 +108,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   }, [contactOpen, customerOpen, setChatOpen]);
 
   const openCustomerEditor = () => {
-    const latest = loadCustomerProfile(user?.name ?? '');
+    const latest = loadCustomerProfile(user?.id, user?.name ?? '');
     setDraftProfile(latest);
     setCustomerOpen(true);
   };
@@ -120,7 +122,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
       payment: draftProfile.payment,
     };
 
-    saveCustomerProfile(next);
+    saveCustomerProfile(user?.id, next);
     setSavedProfile(next);
     setCustomerOpen(false);
   };

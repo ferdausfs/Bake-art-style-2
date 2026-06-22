@@ -50,7 +50,8 @@ export function useCustomers() {
 function aggregateFromOrders(orders: any[], profiles: any[] = []): Customer[] {
   const map = new Map<string, Customer>();
 
-  profiles.forEach((p) => {
+  profiles.filter(Boolean).forEach((p) => {
+    if (!p || !p.id) return;
     map.set(p.id, {
       id: p.id,
       name: p.name || p.email?.split('@')[0] || 'Anonymous',
@@ -64,9 +65,10 @@ function aggregateFromOrders(orders: any[], profiles: any[] = []): Customer[] {
     });
   });
 
-  orders.forEach((o) => {
+  orders.filter(Boolean).forEach((o) => {
     if (!o) return;
     const key = o.userId || o.user_id || o.customer?.phone || `guest-${o.id}`;
+    if (!key) return;
     const prev = map.get(key);
 
     if (prev) {
