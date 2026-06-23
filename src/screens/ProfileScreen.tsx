@@ -1,8 +1,6 @@
-<<<<<<< HEAD
+
 import React, { useEffect, useMemo, useState } from 'react';
-=======
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
->>>>>>> e8f8544 (Feat: Add tier selection + weight-based pricing system + app optimization (Tasks M, N, O, P))
 import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
   ChevronRight, Star, Sparkles, LogIn, X, Save, Check

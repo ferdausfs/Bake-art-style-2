@@ -66,15 +66,13 @@ export default function CustomizeScreen() {
   const selectedWeight = WEIGHTS.find((w) => w.size === config.weight) ?? WEIGHTS[1];
   const selectedAddons = ADDONS.filter((a) => config.addons.includes(a.id));
   const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-<<<<<<< HEAD
-  const total = selectedWeight.price + addonsTotal;
-=======
+  // removed duplicate
+
   // If product has weight-based pricing, compute dynamically
   const weightPrice = product?.pricePerUnit && customWeight && +customWeight > 0
     ? +customWeight * product.pricePerUnit
     : selectedWeight.price;
   const total = weightPrice + addonsTotal;
->>>>>>> e8f8544 (Feat: Add tier selection + weight-based pricing system + app optimization (Tasks M, N, O, P))
   const previewImage = flavorImages[config.flavour] || defaultProduct.image;
 
   const toggleAddon = (id: string) => {
@@ -92,13 +90,11 @@ export default function CustomizeScreen() {
       return;
     }
 
-<<<<<<< HEAD
-=======
+
     const finalSize = product?.pricePerUnit
       ? `${customWeight} ${product?.priceUnit ?? 'kg'}`
       : config.weight;
 
->>>>>>> e8f8544 (Feat: Add tier selection + weight-based pricing system + app optimization (Tasks M, N, O, P))
     add({
       productId: defaultProduct.id,
       name: `Custom ${config.flavour} Cake`,
@@ -247,11 +243,9 @@ export default function CustomizeScreen() {
               </div>
               <div className="space-y-2.5 px-5 py-4 text-[13.5px]">
                 <Review label="Flavour" value={config.flavour} />
-<<<<<<< HEAD
                 <Review label="Weight" value={config.weight} />
-=======
+
                 <Review label="Weight" value={product?.pricePerUnit ? `${customWeight} ${product?.priceUnit ?? 'kg'}` : config.weight} />
->>>>>>> e8f8544 (Feat: Add tier selection + weight-based pricing system + app optimization (Tasks M, N, O, P))
                 <Review label="Add-ons" value={selectedAddons.map((a) => a.label).join(', ') || '— none —'} />
                 <Review label="Message" value={config.message || '— none —'} last />
               </div>
