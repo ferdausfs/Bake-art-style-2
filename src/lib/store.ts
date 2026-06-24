@@ -88,6 +88,8 @@ type UIState = {
   // Loyalty (pending redemption applied at checkout)
   pendingLoyaltyRedeem: number;
   setPendingLoyaltyRedeem: (pts: number) => void;
+  clearLoyalty: () => void;
+  clearAllCheckoutDiscounts: () => void;
   // Admin/user notifications
   newOrderCount: number;
   notifications: NotificationItem[];
@@ -144,9 +146,11 @@ export const useUI = create<UIState>((set, get) => ({
     });
     requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   },
-  applyPromo: (pct) => set({ promoDiscount: pct }),
+  applyPromo: (pct) => set((s) => ({ promoDiscount: pct, pendingLoyaltyRedeem: 0 })),
   clearPromo: () => set({ promoDiscount: 0 }),
-  setPendingLoyaltyRedeem: (pts) => set({ pendingLoyaltyRedeem: Math.max(0, pts) }),
+  setPendingLoyaltyRedeem: (pts) => set((s) => ({ pendingLoyaltyRedeem: Math.max(0, pts), promoDiscount: 0 })),
+  clearLoyalty: () => set({ pendingLoyaltyRedeem: 0 }),
+  clearAllCheckoutDiscounts: () => set({ promoDiscount: 0, pendingLoyaltyRedeem: 0 }),
   addNotification: (title, body) => set((s) => ({
     notifications: [
       { id: `nt-${Date.now()}`, title, body, createdAt: Date.now(), read: false },
@@ -232,24 +236,33 @@ export const useOrders = create<OrderState>()(
           !!user?.id &&
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
 
+        const ui = useUI.getState();
+        const pendingRedeem = ui.pendingLoyaltyRedeem;
+
         const o: Order = {
           ...data,
           id: 'BAS' + Date.now().toString().slice(-6),
           userId: isUuid ? user!.id : undefined,
           createdAt: Date.now(),
           status: 'placed',
+          loyaltyPointsRedeemed: pendingRedeem > 0 ? pendingRedeem : undefined,
         };
+
+        // ensure discount field is populated
+        if (o.discount === undefined) {
+          o.discount = Math.max(0, Math.round(o.subtotal + o.deliveryFee - o.total));
+        }
 
         set((s) => ({ orders: [o, ...s.orders] }));
         useUI.getState().addNotification('✅ Order placed', `Order #${o.id} has been placed successfully.`);
         useLoyalty.getState().addPendingPoints(o.id, o.total);
 
-        // If user redeemed loyalty points in cart, deduct them now
-        const pendingRedeem = useUI.getState().pendingLoyaltyRedeem;
+        // If user redeemed loyalty points in cart, deduct them now (track per order)
         if (pendingRedeem > 0) {
-          useLoyalty.getState().redeemPoints(pendingRedeem);
-          useUI.getState().setPendingLoyaltyRedeem(0);
+          useLoyalty.getState().redeemPoints(pendingRedeem, o.id);
         }
+        // clear both promo + loyalty after order
+        useUI.getState().clearAllCheckoutDiscounts();
 
         if (isSupabaseConfigured()) {
           void supabase.from('orders').insert({
@@ -289,6 +302,10 @@ export const useOrders = create<OrderState>()(
         }
         if (status === 'cancelled') {
           useLoyalty.getState().cancelPoints(id);
+          const refunded = useLoyalty.getState().refundRedeemedPoints(id);
+          if (refunded > 0) {
+            useUI.getState().addNotification('↩️ Points refunded', `${refunded} loyalty points refunded for cancelled order #${id}.`);
+          }
         }
 
         if (isSupabaseConfigured()) {
@@ -338,6 +355,11 @@ export const cartSubtotal = (items: CartItem[]) =>
 export const freeDeliveryThreshold = 999;
 export const standardDeliveryFee = 60;
 export const qualifiesForFreeDelivery = (sub: number) => sub >= freeDeliveryThreshold;
+
+// Loyalty helpers
+export const LOYALTY_STEP_POINTS = 1000;
+export const LOYALTY_STEP_TAKA = 50;
+export const loyaltyDiscountFromPoints = (pts: number) => Math.floor(pts / LOYALTY_STEP_POINTS) * LOYALTY_STEP_TAKA;
 // ── Auth Store ─────────────────────────────────────────────
 import type { User, SiteSettings } from '../types';
 import { DEFAULT_SETTINGS } from './data';
@@ -460,6 +482,7 @@ export const useLocation = create<LocationState>()(
 //   chatOpen, setChatOpen
 
 // ─── Loyalty Points ───────────────────────────────────────────────────────────
+export const LOYALTY_POINTS_PER_TAKA = 50; // 1000 pts = ৳50
 
 type LoyaltyHistory = {
   id: string;
@@ -467,7 +490,7 @@ type LoyaltyHistory = {
   amount: number;
   points: number;
   date: number;
-  type: 'earned' | 'redeemed';
+  type: 'earned' | 'redeemed' | 'refunded';
 };
 
 type LoyaltyState = {
@@ -475,11 +498,13 @@ type LoyaltyState = {
   totalEarned: number;
   history: LoyaltyHistory[];
   pendingPoints: { orderId: string; points: number }[];
+  redeemedPoints: Record<string, number>; // orderId -> points redeemed on that order
   addPoints: (orderId: string, orderTotal: number) => void;
   addPendingPoints: (orderId: string, orderTotal: number) => void;
   confirmPoints: (orderId: string) => void;
   cancelPoints: (orderId: string) => void;
-  redeemPoints: (points: number) => void;
+  redeemPoints: (points: number, orderId?: string) => void;
+  refundRedeemedPoints: (orderId: string) => number;
 };
 
 export const useLoyalty = create<LoyaltyState>()(
@@ -489,6 +514,7 @@ export const useLoyalty = create<LoyaltyState>()(
       totalEarned: 0,
       history: [],
       pendingPoints: [],
+      redeemedPoints: {},
       addPoints: (orderId, orderTotal) => {
         const earned = Math.floor(orderTotal);
         set((s) => ({
@@ -503,7 +529,7 @@ export const useLoyalty = create<LoyaltyState>()(
       addPendingPoints: (orderId, orderTotal) => {
         const pts = Math.floor(orderTotal);
         set((s) => ({
-          pendingPoints: [...s.pendingPoints, { orderId, points: pts }],
+          pendingPoints: [...s.pendingPoints.filter((p) => p.orderId !== orderId), { orderId, points: pts }],
         }));
       },
       confirmPoints: (orderId) => {
@@ -524,14 +550,36 @@ export const useLoyalty = create<LoyaltyState>()(
           pendingPoints: s.pendingPoints.filter((p) => p.orderId !== orderId),
         }));
       },
-      redeemPoints: (pts) => {
-        set((s) => ({
-          points: Math.max(0, s.points - pts),
-          history: [
-            { id: `lh-${Date.now()}`, orderId: 'redemption', amount: 0, points: -pts, date: Date.now(), type: 'redeemed' },
-            ...s.history,
-          ],
-        }));
+      redeemPoints: (pts, orderId) => {
+        set((s) => {
+          const nextRedeemed = { ...s.redeemedPoints };
+          if (orderId) nextRedeemed[orderId] = (nextRedeemed[orderId] || 0) + pts;
+          return {
+            points: Math.max(0, s.points - pts),
+            history: [
+              { id: `lh-${Date.now()}`, orderId: orderId || 'redemption', amount: 0, points: -pts, date: Date.now(), type: 'redeemed' },
+              ...s.history,
+            ],
+            redeemedPoints: nextRedeemed,
+          };
+        });
+      },
+      refundRedeemedPoints: (orderId) => {
+        const redeemed = get().redeemedPoints[orderId] || 0;
+        if (redeemed <= 0) return 0;
+        set((s) => {
+          const nextRedeemed = { ...s.redeemedPoints };
+          delete nextRedeemed[orderId];
+          return {
+            points: s.points + redeemed,
+            history: [
+              { id: `lh-${Date.now()}`, orderId, amount: 0, points: redeemed, date: Date.now(), type: 'refunded' },
+              ...s.history,
+            ],
+            redeemedPoints: nextRedeemed,
+          };
+        });
+        return redeemed;
       },
     }),
     { name: 'bakeart-loyalty' }

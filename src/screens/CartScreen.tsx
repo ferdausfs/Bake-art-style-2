@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Sparkles, Truck, Shield, ShoppingCart, Star } from 'lucide-react';
 import {
   useCart,
@@ -8,15 +8,26 @@ import {
   cartSubtotal,
   standardDeliveryFee,
   useSettingsStore,
+  loyaltyDiscountFromPoints,
+  LOYALTY_STEP_POINTS,
+  LOYALTY_STEP_TAKA,
 } from '../lib/store';
 
 export default function CartScreen() {
   const { items, setQty, remove } = useCart();
-  const { back, go, promoDiscount, applyPromo, clearPromo, setPendingLoyaltyRedeem } = useUI();
+  const {
+    back,
+    go,
+    promoDiscount,
+    applyPromo,
+    clearPromo,
+    pendingLoyaltyRedeem,
+    setPendingLoyaltyRedeem,
+    clearLoyalty,
+  } = useUI();
   const { points } = useLoyalty();
   const [code, setCode] = useState('');
   const [promoError, setPromoError] = useState('');
-  const [loyaltyRedeemed, setLoyaltyRedeemed] = useState(0); // points redeemed this session
 
   const { settings } = useSettingsStore();
   const currentDeliveryFee = settings.deliveryFee !== undefined ? settings.deliveryFee : standardDeliveryFee;
@@ -25,16 +36,38 @@ export default function CartScreen() {
   const subtotal = cartSubtotal(items);
   const isFreeDelivery = subtotal >= currentFreeThreshold;
   const delivery = items.length === 0 ? 0 : (isFreeDelivery ? 0 : currentDeliveryFee);
-  const discountAmount = promoDiscount > 0 ? (subtotal * promoDiscount) / 100 : 0;
-  const total = subtotal + delivery - discountAmount;
+
+  // Loyalty discount: flat taka, not percentage
+  const loyaltyDiscount = loyaltyDiscountFromPoints(pendingLoyaltyRedeem);
+  const promoDiscountAmount = promoDiscount > 0 ? (subtotal * promoDiscount) / 100 : 0;
+  const discountAmount = promoDiscountAmount + loyaltyDiscount;
+  const total = Math.max(0, subtotal + delivery - discountAmount);
+
   const remaining = currentFreeThreshold - subtotal;
   const progress = Math.min((subtotal / currentFreeThreshold) * 100, 100);
 
-  const handleAdd = () => {
+  // Auto-clamp loyalty redemption if cart total drops
+  useEffect(() => {
+    if (pendingLoyaltyRedeem === 0) return;
+    const maxBySubtotal = Math.floor(subtotal / LOYALTY_STEP_TAKA);
+    const maxByPoints = Math.floor(points / LOYALTY_STEP_POINTS);
+    const maxSets = Math.max(0, Math.min(maxByPoints, maxBySubtotal));
+    const maxPts = maxSets * LOYALTY_STEP_POINTS;
+    if (pendingLoyaltyRedeem > maxPts) {
+      setPendingLoyaltyRedeem(maxPts);
+    }
+  }, [subtotal, points, pendingLoyaltyRedeem, setPendingLoyaltyRedeem]);
+
+  const handleCheckout = () => {
     go({ name: 'checkout' });
   };
 
   if (items.length === 0) {
+    // clear any stale discounts when cart empties
+    if (promoDiscount > 0 || pendingLoyaltyRedeem > 0) {
+      clearPromo();
+      clearLoyalty();
+    }
     return (
       <div className="flex h-full flex-col bg-cream">
         <Header title="My cart" onBack={back} />
@@ -61,6 +94,12 @@ export default function CartScreen() {
       </div>
     );
   }
+
+  const maxRedeemableSets = Math.min(
+    Math.floor(points / LOYALTY_STEP_POINTS),
+    Math.floor(subtotal / LOYALTY_STEP_TAKA)
+  );
+  const canRedeem = points >= LOYALTY_STEP_POINTS && maxRedeemableSets > 0 && promoDiscount === 0;
 
   return (
     <div className="flex h-full flex-col bg-cream">
@@ -153,8 +192,8 @@ export default function CartScreen() {
         </div>
 
         {/* Loyalty Points Redemption */}
-        {points >= 1000 && (
-          <div className="mx-4 mt-4 rounded-2xl overflow-hidden border border-amber-200 bg-amber-50">
+        {points >= LOYALTY_STEP_POINTS && (
+          <div className="mt-4 rounded-2xl overflow-hidden border border-amber-200 bg-amber-50">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 text-amber-500" strokeWidth={2} />
@@ -163,39 +202,36 @@ export default function CartScreen() {
                     You have {points.toLocaleString()} points
                   </div>
                   <div className="text-[10px] text-amber-600">
-                    Redeem 1000 pts = ৳50 off
+                    Redeem {LOYALTY_STEP_POINTS} pts = ৳{LOYALTY_STEP_TAKA} off
                   </div>
                 </div>
               </div>
-              {loyaltyRedeemed === 0 ? (
+              {pendingLoyaltyRedeem === 0 ? (
                 <button
                   onClick={() => {
-                    // Calculate max redeemable (multiples of 1000, capped so discount ≤ subtotal)
-                    const maxByPoints = Math.floor(points / 1000);
-                    const maxBySubtotal = Math.floor(subtotal / 50);
-                    const setsToRedeem = Math.max(1, Math.min(maxByPoints, maxBySubtotal));
-                    const ptsToRedeem = setsToRedeem * 1000;
-                    const discountTaka = setsToRedeem * 50;
-                    // Apply as percentage of subtotal (applyPromo takes percentage)
-                    const pct = subtotal > 0 ? Math.min(99, Math.round((discountTaka / subtotal) * 100)) : 0;
-                    applyPromo(pct);
+                    if (promoDiscount > 0) {
+                      setPromoError('Promo code is active — remove it first to use points');
+                      return;
+                    }
+                    const setsToRedeem = maxRedeemableSets;
+                    if (setsToRedeem <= 0) return;
+                    const ptsToRedeem = setsToRedeem * LOYALTY_STEP_POINTS;
                     setPendingLoyaltyRedeem(ptsToRedeem);
-                    setLoyaltyRedeemed(ptsToRedeem);
+                    setPromoError('');
                   }}
-                  className="rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95 transition"
+                  disabled={!canRedeem}
+                  className="rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Redeem
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-emerald-700">
-                    -{loyaltyRedeemed / 1000 * 50}৳ applied!
+                    -৳{loyaltyDiscount} applied!
                   </span>
                   <button
                     onClick={() => {
-                      clearPromo();
-                      setPendingLoyaltyRedeem(0);
-                      setLoyaltyRedeemed(0);
+                      clearLoyalty();
                     }}
                     className="text-[10px] text-ink/40 underline"
                   >
@@ -204,6 +240,11 @@ export default function CartScreen() {
                 </div>
               )}
             </div>
+            {promoDiscount > 0 && pendingLoyaltyRedeem === 0 && (
+              <div className="px-4 pb-2.5 text-[10px] text-amber-700">
+                Remove the promo code to use loyalty points.
+              </div>
+            )}
           </div>
         )}
 
@@ -219,9 +260,14 @@ export default function CartScreen() {
               }}
               placeholder="Promo code"
               className="flex-1 bg-transparent text-[13px] font-medium outline-none placeholder:text-ink-200"
+              disabled={pendingLoyaltyRedeem > 0}
             />
             <button
               onClick={() => {
+                if (pendingLoyaltyRedeem > 0) {
+                  setPromoError('Loyalty points are active — remove them first');
+                  return;
+                }
                 if (!settings.promoEnabled) {
                   setPromoError('No active promo right now');
                   clearPromo();
@@ -235,7 +281,8 @@ export default function CartScreen() {
                   clearPromo();
                 }
               }}
-              className="text-[11.5px] font-bold uppercase tracking-wider text-ink hover:text-coral"
+              disabled={pendingLoyaltyRedeem > 0}
+              className="text-[11.5px] font-bold uppercase tracking-wider text-ink hover:text-coral disabled:opacity-40"
             >
               Apply
             </button>
@@ -246,6 +293,11 @@ export default function CartScreen() {
           {promoDiscount > 0 && !promoError && (
             <p className="mt-1.5 px-3.5 text-emerald-600 text-[11px] font-semibold">
               Promo code "{settings.promoCode}" applied! ({settings.promoPercent}% discount)
+            </p>
+          )}
+          {pendingLoyaltyRedeem > 0 && (
+            <p className="mt-1.5 px-3.5 text-emerald-600 text-[11px] font-semibold">
+              {pendingLoyaltyRedeem.toLocaleString()} points redeemed — ৳{loyaltyDiscount} off
             </p>
           )}
         </div>
@@ -267,17 +319,17 @@ export default function CartScreen() {
               value={delivery === 0 ? 'FREE' : formatINR(delivery)}
               positive={delivery === 0}
             />
-            {promoDiscount > 0 && (
+            {promoDiscountAmount > 0 && (
               <Row
                 label="Promo discount"
-                value={'-' + formatINR(discountAmount)}
+                value={'-' + formatINR(Math.round(promoDiscountAmount))}
                 positive
               />
             )}
-            {loyaltyRedeemed > 0 && (
+            {loyaltyDiscount > 0 && (
               <Row
-                label={`Points (${loyaltyRedeemed.toLocaleString()} pts)`}
-                value={'-' + formatINR(Math.round(loyaltyRedeemed / 1000 * 50))}
+                label={`Points (${pendingLoyaltyRedeem.toLocaleString()} pts)`}
+                value={'-' + formatINR(loyaltyDiscount)}
                 positive
               />
             )}
@@ -303,7 +355,7 @@ export default function CartScreen() {
       {/* Sticky CTA */}
       <div className="absolute right-0 bottom-0 left-0 z-30 border-t border-ink-50/80 bg-white/95 px-5 pt-3 pb-6 backdrop-blur-xl">
         <button
-          onClick={handleAdd}
+          onClick={handleCheckout}
           className="btn-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-bold tracking-tight"
         >
           <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2.2} />

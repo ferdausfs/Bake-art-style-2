@@ -52,6 +52,9 @@ export type Order = {
   subtotal: number;
   deliveryFee: number;
   total: number;
+  discount?: number;
+  promoCode?: string;
+  loyaltyPointsRedeemed?: number;
   status: 'placed' | 'confirmed' | 'baking' | 'ready' | 'out' | 'delivered' | 'cancelled';
   createdAt: number;
   gift?: {

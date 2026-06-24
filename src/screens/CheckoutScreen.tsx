@@ -6,6 +6,7 @@ import {
   useLocation,
   useSettingsStore,
   useAuthStore,
+  loyaltyDiscountFromPoints,
 } from '../lib/store';
 import { LocationGate } from '../components/LocationGate';
 
@@ -34,7 +35,7 @@ interface Props {
 export default function CheckoutScreen({ onBack }: Props) {
   const { items, clear } = useCart();
   const { placeOrder, orders } = useOrders();
-  const { back, go, promoDiscount } = useUI();
+  const { back, go, promoDiscount, pendingLoyaltyRedeem, clearAllCheckoutDiscounts } = useUI();
   const { verified: locationVerified, district: detectedDistrict } = useLocation();
   const user = useAuthStore((s) => s.user);
 
@@ -95,14 +96,16 @@ export default function CheckoutScreen({ onBack }: Props) {
   const currentFreeThreshold = settings.freeDeliveryThreshold !== undefined ? settings.freeDeliveryThreshold : 999;
 
 
-  const { subtotal, delivery, discountAmount, total } = useMemo(() => {
+  const { subtotal, delivery, promoDiscountAmount, loyaltyDiscount, discountAmount, total } = useMemo(() => {
     const sub = cartSubtotal(items);
     const freeDlv = sub >= currentFreeThreshold;
     const dlv = items.length === 0 ? 0 : (freeDlv ? 0 : currentDeliveryFee);
-    const disc = promoDiscount > 0 ? (sub * promoDiscount) / 100 : 0;
+    const promoDisc = promoDiscount > 0 ? (sub * promoDiscount) / 100 : 0;
+    const loyaltyDisc = loyaltyDiscountFromPoints(pendingLoyaltyRedeem);
+    const disc = promoDisc + loyaltyDisc;
     const giftWrapFee = giftMode && gift.wrap ? 50 : 0;
-    return { subtotal: sub, delivery: dlv, discountAmount: disc, total: sub + dlv - disc + giftWrapFee };
-  }, [items, currentDeliveryFee, currentFreeThreshold, promoDiscount, giftMode, gift.wrap]);
+    return { subtotal: sub, delivery: dlv, promoDiscountAmount: promoDisc, loyaltyDiscount: loyaltyDisc, discountAmount: disc, total: Math.max(0, sub + dlv - disc + giftWrapFee) };
+  }, [items, currentDeliveryFee, currentFreeThreshold, promoDiscount, pendingLoyaltyRedeem, giftMode, gift.wrap]);
 
   const handleLocate = async () => {
     setLocating(true);
@@ -152,12 +155,16 @@ export default function CheckoutScreen({ onBack }: Props) {
   const handleSubmit = () => {
     if (items.length === 0) return;
     if (!form.name || !form.phone || !form.address) return;
+    const { settings } = useSettingsStore.getState();
     const o = placeOrder({
       items,
       customer: { name: form.name, phone: form.phone, email: '', address: form.address, city: form.district, pin: '' },
       delivery: { date: form.date, time: form.time },
       payment: form.payment,
       subtotal, deliveryFee: delivery, total,
+      discount: discountAmount,
+      promoCode: promoDiscount > 0 ? settings.promoCode : undefined,
+      loyaltyPointsRedeemed: pendingLoyaltyRedeem > 0 ? pendingLoyaltyRedeem : undefined,
       gift: giftMode ? gift : undefined,
     });
     clear();
@@ -402,10 +409,17 @@ export default function CheckoutScreen({ onBack }: Props) {
               value={delivery === 0 ? 'ফ্রি' : formatINR(delivery)}
               positive={delivery === 0}
             />
-            {promoDiscount > 0 && (
+            {promoDiscountAmount > 0 && (
               <Row
                 label="প্রোমো ডিসকাউন্ট"
-                value={'-' + formatINR(discountAmount)}
+                value={'-' + formatINR(Math.round(promoDiscountAmount))}
+                positive
+              />
+            )}
+            {loyaltyDiscount > 0 && (
+              <Row
+                label={`পয়েন্ট (${pendingLoyaltyRedeem.toLocaleString()} pts)`}
+                value={'-' + formatINR(loyaltyDiscount)}
                 positive
               />
             )}
