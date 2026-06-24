@@ -3,6 +3,7 @@ import { ArrowLeft, Heart, Star, ShoppingBag, Check, Share2, Truck, Sparkles, Sh
 import { useUI, useCart, useUser, useAuthStore, formatINR } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useReviews } from '../hooks/useReviews';
+import { ls } from '../lib/utils';
 import type { Review } from '../types';
 
 const ADDONS = [
@@ -148,6 +149,12 @@ export default function ProductScreen() {
 
           {/* Soft top fade for control legibility */}
           <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-blush-100/85 to-transparent" />
+
+          {product.inStock === false && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-b-[32px]">
+              <span className="rounded-full bg-white/90 px-4 py-2 text-[13px] font-bold text-ink backdrop-blur">Out of Stock</span>
+            </div>
+          )}
 
           {/* Pagination dots */}
           <div className="absolute right-0 bottom-5 left-0 flex justify-center gap-1.5 pointer-events-none">
@@ -521,13 +528,36 @@ export default function ProductScreen() {
               {formatINR(total)}
             </div>
           </div>
-          <button
-            onClick={handleAdd}
-            className="btn-primary ml-auto flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-[14px] font-bold tracking-tight"
-          >
-            <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2.2} />
-            Add to Cart
-          </button>
+          {(product.inStock ?? true) ? (
+            <button
+              onClick={handleAdd}
+              className="btn-primary ml-auto flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-[14px] font-bold tracking-tight"
+            >
+              <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2.2} />
+              Add to Cart
+            </button>
+          ) : (
+            <div className="flex flex-1 ml-auto flex-col items-center gap-2">
+              <div className="text-[11px] text-ink/50 font-semibold">⚠️ Currently out of stock</div>
+              <button
+                onClick={() => {
+                  const key = `bakeart-alerts`;
+                  const alerts = ls.get<{productId: string; productName: string; date: number}[]>(key, []);
+                  const exists = alerts.find(a => a.productId === product.id);
+                  if (!exists) {
+                    ls.set(key, [...alerts, { productId: product.id, productName: product.name, date: Date.now() }]);
+                  }
+                  useUI.getState().addNotification(
+                    '🔔 Alert set!',
+                    `We'll notify you when ${product.name} is back in stock.`
+                  );
+                }}
+                className="btn-primary flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[15px] font-bold"
+              >
+                🔔 Notify Me When Available
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -146,9 +146,9 @@ export const useUI = create<UIState>((set, get) => ({
     });
     requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   },
-  applyPromo: (pct) => set((s) => ({ promoDiscount: pct, pendingLoyaltyRedeem: 0 })),
+  applyPromo: (pct) => set({ promoDiscount: pct, pendingLoyaltyRedeem: 0 }),
   clearPromo: () => set({ promoDiscount: 0 }),
-  setPendingLoyaltyRedeem: (pts) => set((s) => ({ pendingLoyaltyRedeem: Math.max(0, pts), promoDiscount: 0 })),
+  setPendingLoyaltyRedeem: (pts) => set({ pendingLoyaltyRedeem: Math.max(0, pts), promoDiscount: 0 }),
   clearLoyalty: () => set({ pendingLoyaltyRedeem: 0 }),
   clearAllCheckoutDiscounts: () => set({ promoDiscount: 0, pendingLoyaltyRedeem: 0 }),
   addNotification: (title, body) => set((s) => ({

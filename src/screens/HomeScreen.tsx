@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { ArrowRight, Sparkles, ChevronLeft, ChevronRight, Megaphone, RefreshCw } from 'lucide-react';
-import { useUI, useUser, useOrders } from '../lib/store';
+import { useUI, useUser, useOrders, useAuthStore } from '../lib/store';
+import { ls } from '../lib/utils';
 import { categories } from '../lib/data';
 import { useProducts } from '../hooks/useProducts';
 import { useBanners } from '../hooks/useBanners';
@@ -10,9 +11,23 @@ import ProductCard from '../components/ProductCard';
 import SectionHeader from '../components/SectionHeader';
 import BrandLogo from '../components/BrandLogo';
 import OccasionIcon from '../components/OccasionIcon';
-import type { Banner } from '../types';
+import type { Banner, SpecialDate } from '../types';
 
 const ALL_CAT = { id: 'all' as const, name: 'All' };
+
+const getUpcomingDate = (userId?: string): { name: string; daysLeft: number } | null => {
+  if (!userId) return null;
+  const dates = ls.get<SpecialDate[]>(`bakeart-dates-${userId}`, []);
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  for (const d of dates) {
+    const [month, day] = d.date.split('-').map(Number);
+    const event = new Date(currentYear, month - 1, day);
+    const diff = Math.ceil((event.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff >= 0 && diff <= 7) return { name: d.name, daysLeft: diff };
+  }
+  return null;
+};
 
 export default function HomeScreen({
   onLogoTap,
@@ -24,8 +39,10 @@ export default function HomeScreen({
   const { go } = useUI();
   const { wishlist, toggleWish } = useUser();
   const { orders } = useOrders();
+  const { user } = useAuthStore();
   const { products } = useProducts();
   const { banners } = useBanners();
+  const upcoming = getUpcomingDate(user?.id);
 
   const [bannerIdx, setBannerIdx] = useState(0);
   const [search, setSearch] = useState('');
@@ -64,6 +81,19 @@ export default function HomeScreen({
             <SearchBar value={search} onChange={setSearch} />
           </div>
         </div>
+
+        {upcoming && (
+          <div className="mx-5 mb-3 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-coral/10 to-blush-100 px-4 py-3 anim-up"
+            style={{ boxShadow: '0 2px 8px -4px rgba(242,94,115,.2)' }}>
+            <span className="text-2xl flex-shrink-0">🎂</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-bold text-ink truncate">{upcoming.name} {upcoming.daysLeft === 0 ? 'is today!' : `in ${upcoming.daysLeft} day${upcoming.daysLeft > 1 ? 's' : ''}!`}</div>
+              <div className="text-[11px] text-ink/60">Order a special cake now</div>
+            </div>
+            <button onClick={() => go({ name: 'tabs', tab: 'categories' })}
+              className="flex-shrink-0 rounded-xl bg-coral px-3 py-1.5 text-[11px] font-bold text-white">Order</button>
+          </div>
+        )}
 
         {/* Hero carousel */}
         {banners.length > 0 && (

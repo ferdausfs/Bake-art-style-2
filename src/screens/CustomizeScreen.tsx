@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Droplet, Weight, Plus, Camera, X, CheckCircle2, Circle, Square, Heart, RectangleHorizontal, Package, Gift, Sparkles, Drama, Flower2, Cake } from 'lucide-react';
 import { useUI, useCart, useSettingsStore, formatINR } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
+import { fileToBase64 } from '../lib/utils';
 import type { CustomAddon } from '../types';
 
 const STEPS = [
@@ -60,7 +61,6 @@ export default function CustomizeScreen() {
   });
   const [customWeight, setCustomWeight] = useState('1');
   const [refImagePreview, setRefImagePreview] = useState('');
-  const [, setRefImageFile] = useState<File | null>(null);
 
   const selectedWeight = WEIGHTS.find((w) => w.size === `${config.weight} lb`) ?? WEIGHTS[1];
   const allAddons: CustomAddon[] = settings.customAddons ?? [];
@@ -186,7 +186,7 @@ export default function CustomizeScreen() {
                 <div className="relative">
                   <img src={refImagePreview} alt="reference" className="w-full aspect-video rounded-2xl object-cover" />
                   <button
-                    onClick={() => { setRefImagePreview(''); setRefImageFile(null); }}
+                    onClick={() => setRefImagePreview('')}
                     className="absolute top-2 right-2 h-8 w-8 rounded-full bg-ink/60 text-white flex items-center justify-center"
                   >
                     <X className="h-4 w-4" />
@@ -204,8 +204,8 @@ export default function CustomizeScreen() {
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    setRefImageFile(file);
-                    setRefImagePreview(URL.createObjectURL(file));
+                    if (file.size > 5 * 1024 * 1024) { alert('Max 5MB'); return; }
+                    fileToBase64(file).then(setRefImagePreview);
                   }} />
                 </label>
               )}

@@ -8,7 +8,7 @@ import { useCustomers } from '../hooks/useCustomers';
 import { useBanners } from '../hooks/useBanners';
 import { useSettingsStore, useUI } from '../lib/store';
 import { DEFAULT_SETTINGS } from '../lib/data';
-import { formatINR, waLink } from '../lib/utils';
+import { formatINR, waLink, ls } from '../lib/utils';
 import type { Product, Order, Banner, CustomAddon } from '../types';
 
 type AdminTab = 'dashboard' | 'orders' | 'products' | 'banners' | 'gallery' | 'reviews' | 'customers' | 'zones' | 'settings';
@@ -48,7 +48,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
   const { reviews, approveReview, deleteReview } = useReviews();
   const { customers, loading: customersLoading } = useCustomers();
   const { banners, saveBanner, deleteBanner, uploadBannerImage } = useBanners();
-  const { clearNewOrders } = useUI();
+  const { clearNewOrders, addNotification } = useUI();
 
   const [pinInput, setPinInput] = useState('');
   const [pinOk, setPinOk] = useState(false);
@@ -579,6 +579,26 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                   <p className="text-[10px] text-ink/40">{p.occasion || 'birthday'}</p>
                 </div>
                 <div className="flex flex-col gap-1">
+                  {/* In Stock toggle */}
+                  <button
+                    onClick={async () => {
+                      const wasOutOfStock = p.inStock === false;
+                      await saveProduct({ ...p, inStock: wasOutOfStock ? true : false });
+                      if (wasOutOfStock) {
+                        const alerts = ls.get<{productId: string; productName: string}[]>('bakeart-alerts', []);
+                        const hasAlerts = alerts.filter(a => a.productId === p.id);
+                        if (hasAlerts.length > 0) {
+                          addNotification('📦 Restocked!', `${hasAlerts.length} customer${hasAlerts.length > 1 ? 's' : ''} waiting for ${p.name} — they've been notified.`);
+                          ls.set('bakeart-alerts', alerts.filter(a => a.productId !== p.id));
+                        }
+                      }
+                    }}
+                    className={`rounded-lg px-2 py-1 text-[10px] font-bold transition ${
+                      (p.inStock ?? true) ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-400'
+                    }`}
+                  >
+                    {(p.inStock ?? true) ? '✅ In Stock' : '❌ Out of Stock'}
+                  </button>
                   <button onClick={() => setEditProduct(p)} className="w-8 h-8 rounded-xl bg-ink/5 flex items-center justify-center">
                     <Edit3 className="w-3.5 h-3.5 text-ink/60" />
                   </button>

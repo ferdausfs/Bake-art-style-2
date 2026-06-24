@@ -8,7 +8,9 @@ import {
   useAuthStore,
   loyaltyDiscountFromPoints,
 } from '../lib/store';
+import { ls } from '../lib/utils';
 import { LocationGate } from '../components/LocationGate';
+import type { SavedAddress } from '../types';
 
 const PAYMENTS = [
   { id: 'bkash', label: 'bKash', sub: 'Send money / Payment', Icon: Phone },
@@ -28,6 +30,11 @@ const SLOTS = [
   { v: '6pm - 8pm',   hot: false },
 ];
 
+const loadAddresses = (userId?: string): SavedAddress[] => {
+  if (!userId) return [];
+  return ls.get<SavedAddress[]>(`bakeart-addresses-${userId}`, []);
+};
+
 interface Props {
   onBack?: () => void;
 }
@@ -35,7 +42,7 @@ interface Props {
 export default function CheckoutScreen({ onBack }: Props) {
   const { items, clear } = useCart();
   const { placeOrder, orders } = useOrders();
-  const { back, go, promoDiscount, pendingLoyaltyRedeem, clearAllCheckoutDiscounts } = useUI();
+  const { back, go, promoDiscount, pendingLoyaltyRedeem } = useUI();
   const { verified: locationVerified, district: detectedDistrict } = useLocation();
   const user = useAuthStore((s) => s.user);
 
@@ -54,6 +61,9 @@ export default function CheckoutScreen({ onBack }: Props) {
     time: '4pm - 6pm',
     payment: 'cash' as typeof PAYMENTS[number]['id'],
   });
+
+  const savedAddresses = loadAddresses(user?.id);
+  const defaultAddress = savedAddresses.find(a => a.isDefault) ?? savedAddresses[0];
 
   // Autofill name, phone and address for logged in users
   useEffect(() => {
@@ -90,6 +100,17 @@ export default function CheckoutScreen({ onBack }: Props) {
       });
     }
   }, [user, orders]);
+
+  // Prefill from default saved address when available
+  useEffect(() => {
+    if (!user || !defaultAddress) return;
+    setForm((prev) => ({
+      ...prev,
+      phone: prev.phone || defaultAddress.phone,
+      address: prev.address || defaultAddress.address,
+      district: prev.district || defaultAddress.district,
+    }));
+  }, [user, defaultAddress]);
 
   const { settings } = useSettingsStore();
   const currentDeliveryFee = settings.deliveryFee !== undefined ? settings.deliveryFee : standardDeliveryFee;
@@ -233,6 +254,25 @@ export default function CheckoutScreen({ onBack }: Props) {
         {/* Delivery address */}
         <Section icon={MapPin} title="ডেলিভারি ঠিকানা">
           <div className="space-y-2.5">
+            {savedAddresses.length > 0 && (
+              <div className="mb-3">
+                <label className="text-[10px] font-bold text-ink/50 uppercase mb-1 block">Deliver to</label>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {savedAddresses.map((addr) => (
+                    <button
+                      key={addr.id}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, name: addr.name !== 'Home' && addr.name !== 'Office' ? f.name : f.name, phone: addr.phone || f.phone, address: addr.address, district: addr.district }))}
+                      className="flex-shrink-0 rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-left transition active:scale-95"
+                    >
+                      <div className="text-[11px] font-bold text-ink">{addr.name}</div>
+                      <div className="text-[10px] text-ink/50 max-w-[120px] truncate">{addr.address}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <input
               placeholder="আপনার নাম"
               value={form.name}

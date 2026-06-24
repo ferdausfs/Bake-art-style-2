@@ -6,9 +6,24 @@ import {
 import { useUI, useUser, useOrders, useCart, useAuthStore, useLoyalty } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useAuth } from '../hooks/useAuth';
+import { ls } from '../lib/utils';
 import BrandLogo from '../components/BrandLogo';
 import { ChatBot } from '../components/ChatBot';
 import { AdminPanel } from '../components/AdminPanel';
+import type { SavedAddress, SpecialDate } from '../types';
+
+const loadAddresses = (userId?: string): SavedAddress[] => {
+  if (!userId) return [];
+  return ls.get<SavedAddress[]>(`bakeart-addresses-${userId}`, []);
+};
+const saveAddresses = (userId: string, addresses: SavedAddress[]) => {
+  ls.set(`bakeart-addresses-${userId}`, addresses);
+};
+
+const loadSpecialDates = (userId?: string): SpecialDate[] =>
+  userId ? ls.get<SpecialDate[]>(`bakeart-dates-${userId}`, []) : [];
+const saveSpecialDates = (userId: string, dates: SpecialDate[]) =>
+  ls.set(`bakeart-dates-${userId}`, dates);
 
 interface Props {
   onAuthOpen?: () => void;
@@ -107,7 +122,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   const { user } = useAuthStore();
   const { signOut } = useAuth();
   const { products } = useProducts();
-  const { points } = useLoyalty();
+  const { points, history } = useLoyalty();
 
   const [contactOpen, setContactOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -118,6 +133,15 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   const [draftProfile, setDraftProfile] = useState<CustomerProfile>(() =>
     loadCustomerProfile(user?.id, user?.name ?? '')
   );
+
+  const [addresses, setAddresses] = useState<SavedAddress[]>(() => loadAddresses(user?.id));
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
+  const [addrForm, setAddrForm] = useState({ name: '', address: '', district: '', phone: '' });
+
+  const [specialDates, setSpecialDates] = useState<SpecialDate[]>(() => loadSpecialDates(user?.id));
+  const [showDatesModal, setShowDatesModal] = useState(false);
+  const [dateForm, setDateForm] = useState({ type: 'birthday' as SpecialDate['type'], name: '', date: '' });
 
   const wishlistItems = (products ?? []).filter((p) => p && wishlist.includes(p.id));
 
@@ -142,6 +166,36 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
     setChatOpen(contactOpen || customerOpen);
     return () => setChatOpen(false);
   }, [contactOpen, customerOpen, setChatOpen]);
+
+  useEffect(() => {
+    if (user?.id) saveAddresses(user.id, addresses);
+  }, [addresses, user?.id]);
+
+  useEffect(() => {
+    if (user?.id) saveSpecialDates(user.id, specialDates);
+  }, [specialDates, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || specialDates.length === 0) return;
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const updated = [...specialDates];
+    let changed = false;
+    updated.forEach((d, i) => {
+      const [month, day] = d.date.split('-').map(Number);
+      const eventDate = new Date(currentYear, month - 1, day);
+      const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays <= 7 && d.notifiedYear !== currentYear) {
+        useUI.getState().addNotification(
+          `🎂 ${d.name} in ${diffDays === 0 ? 'today!' : `${diffDays} day${diffDays > 1 ? 's' : ''}!`}`,
+          `Order a special cake now to celebrate! 🎉`
+        );
+        updated[i] = { ...d, notifiedYear: currentYear };
+        changed = true;
+      }
+    });
+    if (changed) setSpecialDates(updated);
+  }, [user?.id]); // eslint-disable-line
 
   const openCustomerEditor = () => {
     const latest = loadCustomerProfile(user?.id, user?.name ?? '');
@@ -301,6 +355,35 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
           </section>
         )}
 
+        {/* Loyalty History */}
+        {user && history.length > 0 && (
+          <section className="px-4 pb-2">
+            <div className="rounded-2xl bg-white overflow-hidden"
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 4px 12px -8px rgba(26,19,17,.10)' }}>
+              <div className="px-4 py-3 border-b border-ink/5">
+                <span className="text-[12px] font-bold text-ink">Points History</span>
+              </div>
+              <div className="divide-y divide-ink/5">
+                {history.slice(0, 5).map((h) => (
+                  <div key={h.id} className="flex items-center justify-between px-4 py-2.5">
+                    <div>
+                      <div className="text-[12px] font-semibold text-ink">
+                        {h.type === 'earned' ? '⭐ Points earned' : '🎁 Points redeemed'}
+                      </div>
+                      <div className="text-[10px] text-ink/40">
+                        {new Date(h.date).toLocaleDateString('en-BD', { day: 'numeric', month: 'short' })}
+                      </div>
+                    </div>
+                    <span className={`text-[13px] font-bold ${h.type === 'earned' ? 'text-emerald-600' : 'text-coral'}`}>
+                      {h.type === 'earned' ? '+' : ''}{h.points.toLocaleString()} pts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <div className="mt-4 grid grid-cols-3 gap-2.5 px-5 anim-up delay-1">
           <Stat label="Orders" value={(orders ?? []).length} />
           <Stat label="Wishlist" value={(wishlist ?? []).length} />
@@ -338,6 +421,48 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
               <div><span className="font-bold text-ink">Payment:</span> {paymentLabel}</div>
             </div>
           </button>
+
+          {/* Saved Addresses */}
+          {user && (
+            <button
+              onClick={() => setShowAddressModal(true)}
+              className="mt-3 flex w-full items-center justify-between rounded-2xl bg-white p-4 text-left transition active:scale-[.98]"
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 8px 24px -16px rgba(26,19,17,.16)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-coral/10 text-coral">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-ink">Saved Addresses</div>
+                  <div className="text-[11px] text-ink/50">
+                    {addresses.length === 0 ? 'No saved addresses' : `${addresses.length} address${addresses.length > 1 ? 'es' : ''} saved`}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-ink/30" />
+            </button>
+          )}
+
+          {/* Special Dates */}
+          {user && (
+            <button
+              onClick={() => setShowDatesModal(true)}
+              className="mt-3 flex w-full items-center justify-between rounded-2xl bg-white p-4 text-left transition active:scale-[.98]"
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 8px 24px -16px rgba(26,19,17,.16)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-coral/10 text-coral text-lg">🎂</div>
+                <div>
+                  <div className="text-[13px] font-bold text-ink">Special Dates</div>
+                  <div className="text-[11px] text-ink/50">
+                    {specialDates.length === 0 ? 'Birthdays, anniversaries' : `${specialDates.length} date${specialDates.length > 1 ? 's' : ''} saved`}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-ink/30" />
+            </button>
+          )}
         </div>
 
         {wishlistItems.length > 0 && (
@@ -575,6 +700,157 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
             </div>
           </div>
         </>
+      )}
+
+      {/* Address Manager Modal */}
+      {showAddressModal && (
+        <div className="fixed inset-0 z-[80] flex flex-col bg-black/40 backdrop-blur-sm" onClick={() => !editingAddress && setShowAddressModal(false)}>
+          <div className="mt-auto w-full rounded-t-3xl glass-strong p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-[17px] font-bold text-ink">Saved Addresses</h2>
+              <button onClick={() => setShowAddressModal(false)} className="h-8 w-8 rounded-full bg-ink/5 flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {!editingAddress ? (
+              <>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {addresses.length === 0 && (
+                    <div className="py-6 text-center text-[13px] text-ink/40">No saved addresses yet</div>
+                  )}
+                  {addresses.map((addr) => (
+                    <div key={addr.id} className="flex items-center gap-3 rounded-2xl bg-white p-3"
+                      style={{ boxShadow: '0 1px 4px rgba(26,19,17,.06)' }}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] font-bold text-ink">{addr.name}</span>
+                          {addr.isDefault && <span className="rounded-full bg-coral px-2 py-0.5 text-[9px] font-bold text-white">Default</span>}
+                        </div>
+                        <div className="text-[11px] text-ink/50 mt-0.5">{addr.address}, {addr.district}</div>
+                        <div className="text-[11px] text-ink/40">{addr.phone}</div>
+                      </div>
+                      <div className="flex gap-1">
+                        {!addr.isDefault && (
+                          <button onClick={() => setAddresses(prev => prev.map(a => ({ ...a, isDefault: a.id === addr.id })))}
+                            className="rounded-lg bg-ink/5 px-2 py-1 text-[10px] font-bold text-ink/60">Set default</button>
+                        )}
+                        <button onClick={() => { setAddrForm({ name: addr.name, address: addr.address, district: addr.district, phone: addr.phone }); setEditingAddress(addr); }}
+                          className="rounded-lg bg-coral/10 px-2 py-1 text-[10px] font-bold text-coral">Edit</button>
+                        <button onClick={() => setAddresses(prev => prev.filter(a => a.id !== addr.id))}
+                          className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-bold text-red-400">✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {addresses.length < 5 && (
+                  <button
+                    onClick={() => { setAddrForm({ name: '', address: '', district: '', phone: '' }); setEditingAddress({ id: `addr-${Date.now()}`, name: '', address: '', district: '', phone: '', isDefault: addresses.length === 0 }); }}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-coral py-3 text-[13px] font-bold text-white"
+                  >
+                    + Add New Address
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                <h3 className="text-[14px] font-bold text-ink">{addresses.find(a => a.id === editingAddress.id) ? 'Edit Address' : 'New Address'}</h3>
+                {[
+                  { key: 'name', label: 'Label (e.g. Home, Office)', placeholder: 'Home' },
+                  { key: 'address', label: 'Full Address', placeholder: 'House 5, Road 3, Comilla' },
+                  { key: 'district', label: 'District', placeholder: 'Comilla' },
+                  { key: 'phone', label: 'Phone', placeholder: '01700000000' },
+                ].map((f) => (
+                  <div key={f.key}>
+                    <label className="text-[10px] font-bold text-ink/50 uppercase">{f.label}</label>
+                    <input
+                      value={addrForm[f.key as keyof typeof addrForm]}
+                      onChange={(e) => setAddrForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className="mt-1 w-full rounded-xl border border-ink/10 bg-cream px-3 py-2.5 text-[13px] text-ink focus:border-coral focus:outline-none"
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (!addrForm.name || !addrForm.address) return;
+                      const updated = { ...editingAddress, ...addrForm };
+                      setAddresses(prev => {
+                        const exists = prev.find(a => a.id === updated.id);
+                        return exists ? prev.map(a => a.id === updated.id ? updated : a) : [...prev, updated];
+                      });
+                      setEditingAddress(null);
+                    }}
+                    className="flex-1 rounded-xl bg-coral py-2.5 text-[13px] font-bold text-white"
+                  >Save</button>
+                  <button onClick={() => setEditingAddress(null)}
+                    className="flex-1 rounded-xl bg-ink/5 py-2.5 text-[13px] font-bold text-ink/60">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Special Dates Modal */}
+      {showDatesModal && (
+        <div className="fixed inset-0 z-[80] flex flex-col bg-black/40 backdrop-blur-sm" onClick={() => setShowDatesModal(false)}>
+          <div className="mt-auto w-full rounded-t-3xl glass-strong p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-display text-[17px] font-bold text-ink">Special Dates</h2>
+              <button onClick={() => setShowDatesModal(false)} className="h-8 w-8 rounded-full bg-ink/5 flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-3 text-[11px] text-ink/50">We'll remind you 7 days before to order a cake 🎂</p>
+            <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+              {specialDates.map((d) => (
+                <div key={d.id} className="flex items-center gap-3 rounded-2xl bg-white p-3" style={{ boxShadow: '0 1px 4px rgba(26,19,17,.06)' }}>
+                  <span className="text-xl">{d.type === 'birthday' ? '🎂' : d.type === 'anniversary' ? '💍' : '🎉'}</span>
+                  <div className="flex-1">
+                    <div className="text-[12px] font-bold text-ink">{d.name}</div>
+                    <div className="text-[11px] text-ink/50">{d.type} · {d.date}</div>
+                  </div>
+                  <button onClick={() => setSpecialDates(prev => prev.filter(x => x.id !== d.id))}
+                    className="text-[11px] text-red-400 font-bold">Remove</button>
+                </div>
+              ))}
+              {specialDates.length === 0 && <div className="py-4 text-center text-[12px] text-ink/40">No dates saved yet</div>}
+            </div>
+            {specialDates.length < 5 && (
+              <div className="space-y-2 border-t border-ink/8 pt-3">
+                <div className="flex gap-2">
+                  <select value={dateForm.type} onChange={(e) => setDateForm(f => ({ ...f, type: e.target.value as SpecialDate['type'] }))}
+                    className="rounded-xl border border-ink/10 bg-cream px-2 py-2 text-[12px] text-ink">
+                    <option value="birthday">🎂 Birthday</option>
+                    <option value="anniversary">💍 Anniversary</option>
+                    <option value="other">🎉 Other</option>
+                  </select>
+                  <input value={dateForm.name} onChange={(e) => setDateForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Mom's Birthday"
+                    className="flex-1 rounded-xl border border-ink/10 bg-cream px-3 py-2 text-[12px] text-ink focus:border-coral focus:outline-none" />
+                </div>
+                <div className="flex gap-2">
+                  <input type="date" value={dateForm.date ? `2000-${dateForm.date}` : ''}
+                    onChange={(e) => {
+                      const parts = e.target.value.split('-');
+                      if (parts.length >= 3) setDateForm(f => ({ ...f, date: `${parts[1]}-${parts[2]}` }));
+                    }}
+                    className="flex-1 rounded-xl border border-ink/10 bg-cream px-3 py-2 text-[12px] text-ink focus:border-coral focus:outline-none" />
+                  <button
+                    onClick={() => {
+                      if (!dateForm.name || !dateForm.date) return;
+                      setSpecialDates(prev => [...prev, { id: `sd-${Date.now()}`, ...dateForm }]);
+                      setDateForm({ type: 'birthday', name: '', date: '' });
+                    }}
+                    className="rounded-xl bg-coral px-4 py-2 text-[12px] font-bold text-white"
+                  >Add</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
