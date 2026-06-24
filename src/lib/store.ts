@@ -533,16 +533,36 @@ export const useLoyalty = create<LoyaltyState>()(
         }));
       },
       confirmPoints: (orderId) => {
-        const pending = get().pendingPoints.find((p) => p.orderId === orderId);
-        if (!pending) return;
-        set((s) => ({
-          points: s.points + pending.points,
-          totalEarned: s.totalEarned + pending.points,
+        const s = get();
+        // prevent double-credit
+        if (s.history.find((h) => h.orderId === orderId && h.type === 'earned')) {
+          // clean up stale pending entry if any
+          if (s.pendingPoints.find((p) => p.orderId === orderId)) {
+            set({ pendingPoints: s.pendingPoints.filter((p) => p.orderId !== orderId) });
+          }
+          return;
+        }
+        let pending = s.pendingPoints.find((p) => p.orderId === orderId);
+        let pts = pending?.points ?? 0;
+
+        // Fallback: if pending entry missing (e.g. confirm on different device),
+        // credit based on order total from orders store
+        if (!pts) {
+          try {
+            const order = useOrders.getState().orders.find((o) => o.id === orderId);
+            if (order) pts = Math.floor(order.total);
+          } catch {}
+        }
+        if (!pts || pts <= 0) return;
+
+        set((cur) => ({
+          points: cur.points + pts,
+          totalEarned: cur.totalEarned + pts,
           history: [
-            { id: `lh-${Date.now()}`, orderId, amount: 0, points: pending.points, date: Date.now(), type: 'earned' },
-            ...s.history,
+            { id: `lh-${Date.now()}`, orderId, amount: 0, points: pts, date: Date.now(), type: 'earned' },
+            ...cur.history,
           ],
-          pendingPoints: s.pendingPoints.filter((p) => p.orderId !== orderId),
+          pendingPoints: cur.pendingPoints.filter((p) => p.orderId !== orderId),
         }));
       },
       cancelPoints: (orderId) => {
@@ -565,7 +585,17 @@ export const useLoyalty = create<LoyaltyState>()(
         });
       },
       refundRedeemedPoints: (orderId) => {
-        const redeemed = get().redeemedPoints[orderId] || 0;
+        let redeemed = get().redeemedPoints[orderId] || 0;
+        // Fallback: read from order record if local map is missing (cross-device cancel)
+        if (!redeemed) {
+          try {
+            const order = useOrders.getState().orders.find((o) => o.id === orderId);
+            redeemed = order?.loyaltyPointsRedeemed || 0;
+            // prevent double refund
+            const alreadyRefunded = get().history.find((h) => h.orderId === orderId && h.type === 'refunded');
+            if (alreadyRefunded) redeemed = 0;
+          } catch {}
+        }
         if (redeemed <= 0) return 0;
         set((s) => {
           const nextRedeemed = { ...s.redeemedPoints };
