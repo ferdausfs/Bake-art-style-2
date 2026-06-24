@@ -54,6 +54,13 @@ export type Order = {
   total: number;
   status: 'placed' | 'confirmed' | 'baking' | 'ready' | 'out' | 'delivered' | 'cancelled';
   createdAt: number;
+  gift?: {
+    message: string;
+    hidePrice: boolean;
+    wrap: boolean;
+    recipientName?: string;
+    recipientPhone?: string;
+  };
 };
 
 export type Banner = {

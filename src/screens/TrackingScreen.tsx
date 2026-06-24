@@ -3,7 +3,6 @@ import { ArrowLeft, Package, Search } from 'lucide-react';
 import { useUI, formatINR, useAuthStore } from '../lib/store';
 import { useOrdersHook } from '../hooks/useOrders';
 import { isSupabaseConfigured } from '../lib/utils';
-import OrderTimeline from '../components/OrderTimeline';
 import type { Order } from '../types';
 
 export default function TrackingScreen() {
@@ -103,7 +102,61 @@ export default function TrackingScreen() {
                 <span className="text-[10px] font-bold tracking-wider text-coral uppercase">Live status</span>
                 <span className="text-[12px] font-bold capitalize text-ink">{match.status}</span>
               </div>
-              <OrderTimeline status={match.status} />
+              {/* Vertical timeline */}
+              <div className="mt-3 space-y-0">
+                {[
+                  { key: 'placed',    icon: '🛒', label: 'Order Placed',      sub: 'We received your order' },
+                  { key: 'confirmed', icon: '✅', label: 'Baker Assigned',     sub: 'A baker is on it' },
+                  { key: 'baking',    icon: '🔥', label: 'Baking Started',     sub: 'Your cake is in the oven' },
+                  { key: 'ready',     icon: '🎂', label: 'Quality Check',      sub: 'Almost ready!' },
+                  { key: 'out',       icon: '🚗', label: 'Out for Delivery',   sub: 'On the way to you' },
+                  { key: 'delivered', icon: '🎉', label: 'Delivered',          sub: 'Enjoy your cake!' },
+                ].map((step, i, arr) => {
+                  const statusOrder = ['placed','confirmed','baking','ready','out','delivered'];
+                  const currentIdx = statusOrder.indexOf(match.status);
+                  const stepIdx = statusOrder.indexOf(step.key);
+                  const done = stepIdx <= currentIdx;
+                  const active = stepIdx === currentIdx;
+                  const isLast = i === arr.length - 1;
+                  return (
+                    <div key={step.key} className="flex gap-3">
+                      {/* Left: icon + connector */}
+                      <div className="flex flex-col items-center">
+                        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[18px] transition-all ${
+                          done ? active ? 'ring-2 ring-coral ring-offset-2 scale-110' : 'opacity-100' : 'opacity-30 grayscale'
+                        }`}>
+                          {step.icon}
+                        </div>
+                        {!isLast && (
+                          <div className={`w-0.5 flex-1 my-1 rounded-full ${done && !active ? 'bg-coral' : 'bg-ink/10'}`}
+                            style={{ minHeight: 20 }} />
+                        )}
+                      </div>
+                      {/* Right: text */}
+                      <div className={`pb-4 flex-1 ${active ? '' : 'opacity-60'}`}>
+                        <div className={`text-[13px] font-bold ${done ? 'text-ink' : 'text-ink/40'}`}>{step.label}</div>
+                        <div className="text-[11px] text-ink/50">{step.sub}</div>
+                        {active && match.status === 'out' && (
+                          <div className="mt-2 overflow-hidden rounded-xl bg-coral/8 px-3 py-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[11px] font-bold text-coral">On the way 🚗</span>
+                              <span className="text-[11px] text-ink/50">~15-20 mins</span>
+                            </div>
+                            {/* Truck progress animation */}
+                            <div className="relative h-2 rounded-full bg-ink/10">
+                              <div className="absolute inset-y-0 left-0 w-3/4 rounded-full bg-coral" />
+                              <div className="absolute -top-1 text-[16px]" style={{ left: 'calc(75% - 10px)', animation: 'bounce 1s infinite' }}>🚗</div>
+                            </div>
+                          </div>
+                        )}
+                        {active && match.status === 'delivered' && (
+                          <div className="mt-1 text-[11px] font-bold text-green-600">Delivered successfully! 🎉</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </article>
         ) : query.trim() ? (

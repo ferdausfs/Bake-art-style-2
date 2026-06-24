@@ -1,8 +1,9 @@
 import { Check, Home, Receipt } from 'lucide-react';
-import { useUI } from '../lib/store';
+import { useUI, useLoyalty } from '../lib/store';
 
 export default function SuccessScreen() {
   const { view, setTab, go } = useUI();
+  const { points } = useLoyalty();
   const orderId = view.name === 'success' ? view.orderId : '';
 
   return (
@@ -42,6 +43,15 @@ export default function SuccessScreen() {
           <div className="font-display text-[18px] font-bold tabular text-coral">#{orderId}</div>
         </div>
 
+        {/* Points earned */}
+        <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 anim-rise delay-4 flex items-center gap-2">
+          <span className="text-xl">⭐</span>
+          <div>
+            <div className="text-[12px] font-bold text-amber-700">Points earned!</div>
+            <div className="text-[11px] text-amber-600">You now have {points.toLocaleString()} loyalty points</div>
+          </div>
+        </div>
+
         {/* Timeline */}
         <div className="mt-6 flex items-center gap-1 anim-rise delay-4">
           {['🎂', '✨', '💝', '🚚', '🎉'].map((e, i) => (
@@ -51,6 +61,10 @@ export default function SuccessScreen() {
       </div>
 
       <div className="relative z-10 w-full max-w-sm space-y-2.5 anim-up delay-5">
+        <div className="flex items-center justify-center gap-1.5 mb-2">
+          <div className="h-2 w-2 rounded-full bg-coral animate-ping" />
+          <span className="text-[11px] font-semibold text-coral">Live tracking available</span>
+        </div>
         <button
           onClick={() => go({ name: 'tracking', orderId })}
           className="btn-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-bold tracking-tight"

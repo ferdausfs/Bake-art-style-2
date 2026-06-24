@@ -237,6 +237,7 @@ export const useOrders = create<OrderState>()(
 
         set((s) => ({ orders: [o, ...s.orders] }));
         useUI.getState().addNotification('✅ Order placed', `Order #${o.id} has been placed successfully.`);
+        useLoyalty.getState().addPoints(o.id, o.total);
 
         if (isSupabaseConfigured()) {
           const user = useAuthStore.getState().user;
@@ -440,3 +441,53 @@ export const useLocation = create<LocationState>()(
 //   promoDiscount, applyPromo, clearPromo
 //   newOrderCount, incrementNewOrders, clearNewOrders
 //   chatOpen, setChatOpen
+
+// ─── Loyalty Points ───────────────────────────────────────────────────────────
+
+type LoyaltyHistory = {
+  id: string;
+  orderId: string;
+  amount: number;
+  points: number;
+  date: number;
+  type: 'earned' | 'redeemed';
+};
+
+type LoyaltyState = {
+  points: number;
+  totalEarned: number;
+  history: LoyaltyHistory[];
+  addPoints: (orderId: string, orderTotal: number) => void;
+  redeemPoints: (points: number) => void;
+};
+
+export const useLoyalty = create<LoyaltyState>()(
+  persist(
+    (set, get) => ({
+      points: 0,
+      totalEarned: 0,
+      history: [],
+      addPoints: (orderId, orderTotal) => {
+        const earned = Math.floor(orderTotal);
+        set((s) => ({
+          points: s.points + earned,
+          totalEarned: s.totalEarned + earned,
+          history: [
+            { id: `lh-${Date.now()}`, orderId, amount: orderTotal, points: earned, date: Date.now(), type: 'earned' },
+            ...s.history,
+          ],
+        }));
+      },
+      redeemPoints: (pts) => {
+        set((s) => ({
+          points: Math.max(0, s.points - pts),
+          history: [
+            { id: `lh-${Date.now()}`, orderId: 'redemption', amount: 0, points: -pts, date: Date.now(), type: 'redeemed' },
+            ...s.history,
+          ],
+        }));
+      },
+    }),
+    { name: 'bakeart-loyalty' }
+  )
+);

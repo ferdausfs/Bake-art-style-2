@@ -4,7 +4,7 @@ import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
   ChevronRight, Star, Sparkles, LogIn, X, Save, Check
 } from 'lucide-react';
-import { useUI, useUser, useOrders, useCart, useAuthStore } from '../lib/store';
+import { useUI, useUser, useOrders, useCart, useAuthStore, useLoyalty } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useAuth } from '../hooks/useAuth';
 import BrandLogo from '../components/BrandLogo';
@@ -106,6 +106,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   const { user } = useAuthStore();
   const { signOut } = useAuth();
   const { products } = useProducts();
+  const { points, totalEarned, history } = useLoyalty();
 
   const [contactOpen, setContactOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -270,6 +271,40 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Loyalty Points Card */}
+        {user && (
+          <section className="px-4 pt-2 pb-1">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 px-5 py-4 text-white"
+              style={{ boxShadow: '0 8px 24px -8px rgba(217,161,91,.5)' }}>
+              {/* Background decoration */}
+              <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10" />
+              <div className="pointer-events-none absolute -right-1 top-8 h-16 w-16 rounded-full bg-white/8" />
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">Loyalty Points</div>
+                  <div className="mt-1 font-display text-[36px] font-bold leading-none">⭐ {points.toLocaleString()}</div>
+                  <div className="mt-1 text-[11px] text-white/70">Total earned: {totalEarned.toLocaleString()} pts</div>
+                </div>
+                <div className="rounded-2xl bg-white/20 px-3 py-2 text-center">
+                  <div className="text-[10px] font-bold text-white/80">Next reward</div>
+                  <div className="font-display text-[15px] font-bold">৳{Math.floor((1000 - (points % 1000)) / 10) * 10} away</div>
+                </div>
+              </div>
+              {/* Progress bar to next 1000 */}
+              <div className="mt-3">
+                <div className="mb-1 flex justify-between text-[10px] text-white/70">
+                  <span>{points % 1000} / 1000 pts</span>
+                  <span>৳50 off next reward</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/20">
+                  <div className="h-full rounded-full bg-white transition-all"
+                    style={{ width: `${Math.min(100, ((points % 1000) / 1000) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="mt-4 grid grid-cols-3 gap-2.5 px-5 anim-up delay-1">
           <Stat label="Orders" value={(orders ?? []).length} />

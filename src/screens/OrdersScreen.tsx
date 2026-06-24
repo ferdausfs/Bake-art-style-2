@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Check, Package, ChefHat, Truck, Receipt, Search } from 'lucide-react';
-import { useUI, formatINR, useAuthStore } from '../lib/store';
+import { useUI, formatINR, useAuthStore, useCart } from '../lib/store';
 import { useOrdersHook } from '../hooks/useOrders';
 import { isSupabaseConfigured } from '../lib/utils';
 
@@ -164,6 +164,19 @@ export default function OrdersScreen() {
                       className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-coral-50 text-[12px] font-bold text-coral transition active:scale-[.98]"
                     >
                       <Search className="h-4 w-4" /> Open tracking
+                    </button>
+                    <button
+                      onClick={() => {
+                        o.items.forEach((item) => useCart.getState().add({ ...item }));
+                        useUI.getState().addNotification(
+                          '🛒 Added to cart!',
+                          `${o.items.length} item${o.items.length > 1 ? 's' : ''} from Order #${o.id} added to cart.`
+                        );
+                        setTimeout(() => go({ name: 'cart' }), 600);
+                      }}
+                      className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-[12px] font-bold text-white transition active:scale-[.98]"
+                    >
+                      🔄 Order Again
                     </button>
                   </div>
                 </article>
