@@ -20,7 +20,7 @@ export default function NotificationsSheet({ open, onClose }: { open: boolean; o
       >
         <header className="flex items-center justify-between bg-white px-5 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-coral-50 text-coral">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-50 text-ink-200">
               <Bell className="h-[17px] w-[17px]" />
             </div>
             <div>
@@ -32,7 +32,7 @@ export default function NotificationsSheet({ open, onClose }: { open: boolean; o
             {notifications.length > 0 && (
               <button
                 onClick={markAllRead}
-                className="flex h-9 items-center gap-1 rounded-full px-2.5 text-[11px] font-bold text-coral hover:bg-coral-50"
+                className="flex h-9 items-center gap-1 rounded-full px-2.5 text-[11px] font-bold text-ink hover:bg-ink-50"
               >
                 <CheckCheck className="h-3.5 w-3.5" /> Read all
               </button>
@@ -49,7 +49,9 @@ export default function NotificationsSheet({ open, onClose }: { open: boolean; o
         <div className="no-scrollbar max-h-[60vh] overflow-y-auto p-4">
           {notifications.length === 0 ? (
             <div className="py-12 text-center">
-              <div className="text-4xl">🔔</div>
+              <div className="flex justify-center text-ink-200 opacity-50">
+                <Bell size={40} strokeWidth={1.5} />
+              </div>
               <p className="mt-2 text-[13px] font-medium text-ink-300">No notifications yet</p>
               <p className="text-[11px] text-ink-200">Order and promo updates will appear here.</p>
             </div>

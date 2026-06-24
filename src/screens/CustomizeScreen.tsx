@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Droplet, Weight, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Droplet, Weight, Plus, Camera, X, CheckCircle2, Circle, Square, Heart, RectangleHorizontal, Package, Gift, Sparkles, Drama, Flower2, Cake } from 'lucide-react';
 import { useUI, useCart, useSettingsStore, formatINR } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import type { CustomAddon } from '../types';
@@ -33,7 +33,6 @@ const WEIGHTS = [
 ];
 
 
-
 export default function CustomizeScreen() {
   const { view, back, go } = useUI();
   const { add } = useCart();
@@ -61,7 +60,7 @@ export default function CustomizeScreen() {
   });
   const [customWeight, setCustomWeight] = useState('1');
   const [refImagePreview, setRefImagePreview] = useState('');
-  const [refImageFile, setRefImageFile] = useState<File | null>(null);
+  const [, setRefImageFile] = useState<File | null>(null);
 
   const selectedWeight = WEIGHTS.find((w) => w.size === `${config.weight} lb`) ?? WEIGHTS[1];
   const allAddons: CustomAddon[] = settings.customAddons ?? [];
@@ -165,7 +164,7 @@ export default function CustomizeScreen() {
             <div className="aspect-square w-full">
               <img src={previewImage} alt={config.flavour} className="h-full w-full object-cover" />
             </div>
-            <div className="absolute right-3 bottom-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-coral backdrop-blur">
+            <div className="absolute right-3 bottom-3 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-bold text-ink backdrop-blur">
               {config.flavour} · {config.weight} lb
             </div>
           </div>
@@ -175,7 +174,9 @@ export default function CustomizeScreen() {
           {step === 0 && (
             <section className="rounded-2xl bg-white p-4" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
               <div className="mb-3 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral text-lg">📸</div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
+                  <Camera className="h-4 w-4" strokeWidth={2} />
+                </div>
                 <div>
                   <h3 className="font-display text-[14px] font-bold text-ink">Reference Image</h3>
                   <p className="text-[11px] text-ink/50">Upload a photo of the cake you want</p>
@@ -186,13 +187,18 @@ export default function CustomizeScreen() {
                   <img src={refImagePreview} alt="reference" className="w-full aspect-video rounded-2xl object-cover" />
                   <button
                     onClick={() => { setRefImagePreview(''); setRefImageFile(null); }}
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-ink/60 text-white flex items-center justify-center text-sm"
-                  >✕</button>
-                  <div className="mt-2 text-center text-[11px] text-emerald-600 font-semibold">✅ Reference image added</div>
+                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-ink/60 text-white flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 font-semibold">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Reference image added
+                  </div>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center gap-2 h-36 rounded-2xl border-2 border-dashed border-ink/15 bg-cream cursor-pointer active:bg-coral/5">
-                  <span className="text-4xl">📷</span>
+                <label className="flex flex-col items-center justify-center gap-2 h-36 rounded-2xl border-2 border-dashed border-ink/15 bg-cream cursor-pointer active:bg-ink-50">
+                  <Camera className="h-9 w-9 text-ink-200" strokeWidth={1.5} />
                   <span className="text-[12px] font-semibold text-ink/50">Tap to upload reference photo</span>
                   <span className="text-[10px] text-ink/30">JPG, PNG — max 5MB</span>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
@@ -221,7 +227,7 @@ export default function CustomizeScreen() {
             product?.pricePerUnit ? (
               <div className="rounded-2xl bg-white p-3.5" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
                 <div className="mb-3 flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
                     <Weight className="h-4 w-4" strokeWidth={2} />
                   </div>
                   <h3 className="font-display text-[14px] font-bold tracking-tight text-ink">Weight</h3>
@@ -240,9 +246,9 @@ export default function CustomizeScreen() {
                   <span className="text-sm font-bold text-ink/50">{product?.priceUnit ?? settings.defaultPriceUnit ?? 'pound'}</span>
                 </div>
                 {customWeight && +customWeight > 0 && (
-                  <div className="mt-2 rounded-xl bg-coral/8 px-3 py-2 flex items-center justify-between">
+                  <div className="mt-2 rounded-xl bg-ink-50 px-3 py-2 flex items-center justify-between">
                     <span className="text-[11px] text-ink/60">{customWeight} {product?.priceUnit ?? settings.defaultPriceUnit ?? 'pound'} × ৳{product?.pricePerUnit}</span>
-                    <span className="font-display text-base font-bold text-coral">৳{(+customWeight * (product?.pricePerUnit ?? 0)).toLocaleString()}</span>
+                    <span className="font-display text-base font-bold text-ink">৳{(+customWeight * (product?.pricePerUnit ?? 0)).toLocaleString()}</span>
                   </div>
                 )}
               </div>
@@ -262,48 +268,58 @@ export default function CustomizeScreen() {
               {/* Shape */}
               <div className="rounded-2xl bg-white p-4" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
                 <div className="mb-3 flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral text-lg">🔷</div>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
+                    <Cake className="h-4 w-4" strokeWidth={2} />
+                  </div>
                   <h3 className="font-display text-[14px] font-bold text-ink">Cake Shape</h3>
                   <span className="ml-auto text-[11px] font-semibold text-ink-200 capitalize">{config.shape}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'round',  emoji: '⭕', label: 'Round',       sub: 'Classic round' },
-                    { id: 'square', emoji: '⬛', label: 'Square',      sub: 'Modern square' },
-                    { id: 'heart',  emoji: '❤️', label: 'Heart',       sub: 'For loved ones' },
-                    { id: 'sheet',  emoji: '▬',  label: 'Sheet/Flat',  sub: 'Flat & wide' },
-                  ].map((s) => (
-                    <button key={s.id} onClick={() => setConfig((prev) => ({ ...prev, shape: s.id }))}
-                      className={`rounded-2xl border-2 p-3 text-left transition active:scale-[.98] ${config.shape === s.id ? 'border-coral bg-coral-50/60' : 'border-ink-50 bg-white'}`}>
-                      <div className="text-2xl">{s.emoji}</div>
-                      <div className="mt-2 text-[12px] font-bold text-ink">{s.label}</div>
-                      <div className="text-[10px] text-ink/50">{s.sub}</div>
-                    </button>
-                  ))}
+                    { id: 'round',  Icon: Circle,             label: 'Round',       sub: 'Classic round' },
+                    { id: 'square', Icon: Square,             label: 'Square',      sub: 'Modern square' },
+                    { id: 'heart',  Icon: Heart,              label: 'Heart',       sub: 'For loved ones' },
+                    { id: 'sheet',  Icon: RectangleHorizontal, label: 'Sheet/Flat',  sub: 'Flat & wide' },
+                  ].map((s) => {
+                    const ShapeIcon = s.Icon;
+                    return (
+                      <button key={s.id} onClick={() => setConfig((prev) => ({ ...prev, shape: s.id }))}
+                        className={`rounded-2xl border-2 p-3 text-left transition active:scale-[.98] ${config.shape === s.id ? 'border-coral bg-coral-50/60' : 'border-ink-50 bg-white'}`}>
+                        <ShapeIcon className={`h-6 w-6 ${config.shape === s.id ? 'text-coral' : 'text-ink'}`} strokeWidth={1.5} />
+                        <div className="mt-2 text-[12px] font-bold text-ink">{s.label}</div>
+                        <div className="text-[10px] text-ink/50">{s.sub}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Box type */}
               <div className="rounded-2xl bg-white p-4" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
                 <div className="mb-3 flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral text-lg">📦</div>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
+                    <Package className="h-4 w-4" strokeWidth={2} />
+                  </div>
                   <h3 className="font-display text-[14px] font-bold text-ink">Box Type</h3>
                   <span className="ml-auto text-[11px] font-semibold text-ink-200 capitalize">{config.boxType.replace('_', ' ')}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'standard', emoji: '📦', label: 'Standard Box',  sub: 'Regular height' },
-                    { id: 'flat',     emoji: '🗂️', label: 'Flat Box',      sub: 'For sheet/flat cakes' },
-                    { id: 'tall',     emoji: '🏛️', label: 'Tall Box',      sub: 'For layered cakes' },
-                    { id: 'custom',   emoji: '🎁', label: 'Custom/Gift',   sub: 'Premium gift box +৳50' },
-                  ].map((b) => (
-                    <button key={b.id} onClick={() => setConfig((prev) => ({ ...prev, boxType: b.id }))}
-                      className={`rounded-2xl border-2 p-3 text-left transition active:scale-[.98] ${config.boxType === b.id ? 'border-coral bg-coral-50/60' : 'border-ink-50 bg-white'}`}>
-                      <div className="text-2xl">{b.emoji}</div>
-                      <div className="mt-2 text-[12px] font-bold text-ink">{b.label}</div>
-                      <div className="text-[10px] text-ink/50">{b.sub}</div>
-                    </button>
-                  ))}
+                    { id: 'standard', Icon: Package,           label: 'Standard Box',  sub: 'Regular height' },
+                    { id: 'flat',     Icon: RectangleHorizontal, label: 'Flat Box',      sub: 'For sheet/flat cakes' },
+                    { id: 'tall',     Icon: Cake,              label: 'Tall Box',      sub: 'For layered cakes' },
+                    { id: 'custom',   Icon: Gift,              label: 'Custom/Gift',   sub: 'Premium gift box +৳50' },
+                  ].map((b) => {
+                    const BoxIcon = b.Icon;
+                    return (
+                      <button key={b.id} onClick={() => setConfig((prev) => ({ ...prev, boxType: b.id }))}
+                        className={`rounded-2xl border-2 p-3 text-left transition active:scale-[.98] ${config.boxType === b.id ? 'border-coral bg-coral-50/60' : 'border-ink-50 bg-white'}`}>
+                        <BoxIcon className={`h-6 w-6 ${config.boxType === b.id ? 'text-coral' : 'text-ink'}`} strokeWidth={1.5} />
+                        <div className="mt-2 text-[12px] font-bold text-ink">{b.label}</div>
+                        <div className="text-[10px] text-ink/50">{b.sub}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -320,7 +336,7 @@ export default function CustomizeScreen() {
                   rows={3}
                   value={config.message}
                   onChange={(e) => setConfig({ ...config, message: e.target.value })}
-                  placeholder="Happy Birthday, Aanya! 🎉"
+                  placeholder="Happy Birthday, Aanya!"
                   className="w-full resize-none rounded-xl bg-cream px-3 py-2.5 text-[14px] outline-none placeholder:text-ink-100 focus:bg-blush-50"
                 />
                 <div className="mt-2 flex items-center justify-between text-[11px] text-ink-200">
@@ -342,7 +358,7 @@ export default function CustomizeScreen() {
                 <Review label="Weight" value={product?.pricePerUnit ? `${customWeight} ${product?.priceUnit ?? settings.defaultPriceUnit ?? 'pound'}` : `${config.weight} lb`} />
                 <Review label="Shape" value={config.shape} />
                 <Review label="Box" value={config.boxType.replace('_', ' ')} />
-                {refImagePreview && <Review label="Reference" value="📸 Photo attached" />}
+                {refImagePreview && <Review label="Reference" value="Photo attached" />}
                 <Review label="Add-ons" value={selectedAddons.map((a) => a.label).join(', ') || '— none —'} />
                 <Review label="Message" value={config.message || '— none —'} last />
               </div>
@@ -379,7 +395,7 @@ function FlavorPicker({
   return (
     <section className="rounded-2xl bg-white p-3.5" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
       <div className="mb-3 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
           <Droplet className="h-4 w-4" strokeWidth={2} />
         </div>
         <h3 className="font-display text-[14px] font-bold tracking-tight text-ink">Choose flavour</h3>
@@ -417,16 +433,16 @@ function AddonsPicker({
   onToggle: (id: string) => void;
 }) {
   // Group by category
-  const categories: { id: CustomAddon['category']; label: string; emoji: string }[] = [
-    { id: 'decoration', label: 'Decoration',  emoji: '✨' },
-    { id: 'theme',      label: 'Theme',        emoji: '🎭' },
-    { id: 'flowers',    label: 'Flowers',      emoji: '🌸' },
-    { id: 'extras',     label: 'Extras',       emoji: '🎁' },
+  const categories: { id: CustomAddon['category']; label: string; Icon: typeof Sparkles }[] = [
+    { id: 'decoration', label: 'Decoration',  Icon: Sparkles },
+    { id: 'theme',      label: 'Theme',        Icon: Drama },
+    { id: 'flowers',    label: 'Flowers',      Icon: Flower2 },
+    { id: 'extras',     label: 'Extras',       Icon: Gift },
   ];
   return (
     <section className="rounded-2xl bg-white p-3.5" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
       <div className="mb-3 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
           <Plus className="h-4 w-4" strokeWidth={2} />
         </div>
         <h3 className="font-display text-[14px] font-bold tracking-tight text-ink">Add-ons</h3>
@@ -435,10 +451,11 @@ function AddonsPicker({
       {categories.map((cat) => {
         const items = addons.filter((a) => a.category === cat.id);
         if (items.length === 0) return null;
+        const CatIcon = cat.Icon;
         return (
           <div key={cat.id} className="mb-4">
             <div className="mb-2 flex items-center gap-1.5">
-              <span className="text-sm">{cat.emoji}</span>
+              <CatIcon className="h-3.5 w-3.5 text-ink-200" strokeWidth={2} />
               <span className="text-[11px] font-bold uppercase tracking-wide text-ink/40">{cat.label}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -448,7 +465,7 @@ function AddonsPicker({
                   <button key={addon.id} onClick={() => onToggle(addon.id)}
                     className={`rounded-2xl border-2 p-3 text-left transition active:scale-[.98] ${active ? 'border-coral bg-coral-50/60' : 'border-ink-50 bg-white'}`}>
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-xl">{addon.emoji}</span>
+                      <Sparkles className={`h-5 w-5 ${active ? 'text-coral' : 'text-ink-200'}`} strokeWidth={1.5} />
                       {active && <Check className="h-4 w-4 text-coral" strokeWidth={3} />}
                     </div>
                     <div className="mt-2 text-[12px] font-bold text-ink">{addon.label}</div>
@@ -480,7 +497,7 @@ function ChipGroup({
   return (
     <section className="rounded-2xl bg-white p-3.5" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 6px 18px -14px rgba(26,19,17,.16)' }}>
       <div className="mb-3 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
           <Icon className="h-4 w-4" strokeWidth={2} />
         </div>
         <h3 className="font-display text-[14px] font-bold tracking-tight text-ink">{label}</h3>

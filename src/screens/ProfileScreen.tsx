@@ -1,8 +1,7 @@
-
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
-  ChevronRight, Star, Sparkles, LogIn, X, Save, Check
+  ChevronRight, Star, Sparkles, LogIn, X, Save, Check, User, AlertTriangle
 } from 'lucide-react';
 import { useUI, useUser, useOrders, useCart, useAuthStore, useLoyalty } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
@@ -81,13 +80,15 @@ class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, 
     if (this.state.hasError) {
       return (
         <div className="bg-red-50 border border-red-100 rounded-3xl p-5 mt-4 text-center">
-          <div className="text-3xl mb-2">⚠️</div>
+          <div className="flex justify-center text-red-500 mb-2">
+            <AlertTriangle size={32} strokeWidth={1.75} />
+          </div>
           <h2 className="text-sm font-bold text-red-700 mb-1">Admin Dashboard Error</h2>
           <p className="text-xs text-red-500 mb-2">{this.state.errorMessage}</p>
           <p className="text-xs text-ink/40">Refresh the page to retry.</p>
           <button
             onClick={() => this.setState({ hasError: false, errorMessage: '' })}
-            className="mt-3 px-4 py-2 rounded-xl bg-coral text-white text-xs font-bold"
+            className="mt-3 px-4 py-2 rounded-xl bg-ink text-white text-xs font-bold"
           >
             Retry
           </button>
@@ -106,7 +107,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   const { user } = useAuthStore();
   const { signOut } = useAuth();
   const { products } = useProducts();
-  const { points, totalEarned, history } = useLoyalty();
+  const { points } = useLoyalty();
 
   const [contactOpen, setContactOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -167,42 +168,36 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
       Icon: Heart,
       label: 'Wishlist',
       sub: `${(wishlist ?? []).length} saved items`,
-      accent: 'text-coral',
       action: () => go({ name: 'wishlist' }),
     },
     {
       Icon: MapPin,
       label: 'Addresses',
       sub: savedProfile.address ? `${savedProfile.district} · saved` : 'Save delivery address',
-      accent: 'text-ink',
       action: openCustomerEditor,
     },
     {
       Icon: CreditCard,
       label: 'Payment methods',
       sub: paymentLabel,
-      accent: 'text-ink',
       action: openCustomerEditor,
     },
     {
       Icon: Bell,
       label: 'Notifications',
       sub: 'Order & promo updates',
-      accent: 'text-ink',
       action: () => {},
     },
     {
       Icon: HelpCircle,
       label: 'Contact & Support',
       sub: 'কোনো সমস্যা? আমাদের জানান',
-      accent: 'text-coral',
       action: () => setContactOpen(true),
     },
     {
       Icon: Settings,
       label: 'Settings',
       sub: 'Customer info & preferences',
-      accent: 'text-ink',
       action: openCustomerEditor,
     },
   ];
@@ -210,7 +205,9 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   if (!user) {
     return (
       <div className="flex h-full flex-col bg-cream items-center justify-center px-8 text-center">
-        <div className="text-5xl mb-4">👤</div>
+        <div className="flex justify-center text-ink-200 opacity-60 mb-4">
+          <User size={48} strokeWidth={1.5} />
+        </div>
         <h2 className="font-display text-2xl font-bold text-ink mb-2">Sign In</h2>
         <p className="text-sm text-ink/50 mb-6">
           Sign in to save your delivery info, orders, wishlist, and profile.
@@ -244,7 +241,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
         <div className="px-5 anim-up">
           <div
             className="relative overflow-hidden rounded-[28px] p-5"
-            style={{ background: 'linear-gradient(135deg, #F25E73 0%, #B73A4D 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #2A1F1E 0%, #3D2D2C 100%)' }}
           >
             <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10" />
             <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-gold/15" />
@@ -283,23 +280,21 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">Loyalty Points</div>
-                  <div className="mt-1 font-display text-[36px] font-bold leading-none">⭐ {points.toLocaleString()}</div>
-                  <div className="mt-1 text-[11px] text-white/70">Total earned: {totalEarned.toLocaleString()} pts</div>
-                </div>
-                <div className="rounded-2xl bg-white/20 px-3 py-2 text-center">
-                  <div className="text-[10px] font-bold text-white/80">Next reward</div>
-                  <div className="font-display text-[15px] font-bold">৳{Math.floor((1000 - (points % 1000)) / 10) * 10} away</div>
-                </div>
-              </div>
-              {/* Progress bar to next 1000 */}
-              <div className="mt-3">
-                <div className="mb-1 flex justify-between text-[10px] text-white/70">
-                  <span>{points % 1000} / 1000 pts</span>
-                  <span>৳50 off next reward</span>
-                </div>
-                <div className="h-2 rounded-full bg-white/20">
-                  <div className="h-full rounded-full bg-white transition-all"
-                    style={{ width: `${Math.min(100, ((points % 1000) / 1000) * 100)}%` }} />
+                  <div className="mt-1 font-display text-[36px] font-bold leading-none
+..." />
+                  <div className="mt-1 text-[11px] text-white/80">
+                    Earn 1 point per ৳10 spent · Redeem 1000 pts = ৳50 off
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-white/80">
+                      <span>Next reward at 1000 pts</span>
+                      <span>{points % 1000}/1000</span>
+                    </div>
+                    <div className="mt-1 h-2 rounded-full bg-white/20">
+                      <div className="h-full rounded-full bg-white transition-all"
+                        style={{ width: `${Math.min(100, ((points % 1000) / 1000) * 100)}%` }} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -320,7 +315,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-[10px] font-bold tracking-wider text-coral uppercase">
+                <div className="text-[10px] font-bold tracking-wider text-ink-200 uppercase">
                   Quick checkout profile
                 </div>
                 <div className="mt-1 text-[14px] font-bold text-ink">
@@ -328,7 +323,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
                 </div>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                profileComplete ? 'bg-green-50 text-green-700' : 'bg-coral-50 text-coral'
+                profileComplete ? 'bg-green-50 text-green-700' : 'bg-ink-50 text-ink-200'
               }`}>
                 {profileComplete ? 'Ready' : 'Setup'}
               </span>
@@ -353,7 +348,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
               </h3>
               <button
                 onClick={() => go({ name: 'wishlist' })}
-                className="text-[12px] font-bold text-coral"
+                className="text-[12px] font-bold text-ink underline-offset-4 hover:underline"
               >
                 See all
               </button>
@@ -387,7 +382,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
                   i !== menu.length - 1 ? 'border-b border-ink-50' : ''
                 }`}
               >
-                <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-coral-50 ${m.accent}`}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-50 text-ink-200">
                   <m.Icon className="h-[17px] w-[17px]" strokeWidth={2} />
                 </div>
                 <div className="flex-1">
@@ -401,15 +396,15 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
         </div>
 
         <div className="mt-4 px-5 anim-up delay-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-dashed border-coral-300 bg-coral-50/40 px-3.5 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral text-white">
+          <div className="flex items-center gap-3 rounded-2xl border border-dashed border-ink-100 bg-white px-3.5 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-white">
               <Sparkles className="h-4 w-4" strokeWidth={2} />
             </div>
             <div className="flex-1">
               <div className="text-[13px] font-bold text-ink">Invite friends, earn ৳200</div>
               <div className="text-[11px] text-ink-200">Share your referral link</div>
             </div>
-            <button className="rounded-full bg-coral px-3 py-1.5 text-[11px] font-bold text-white active:scale-95">
+            <button className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-bold text-white active:scale-95">
               Invite
             </button>
           </div>
@@ -418,7 +413,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
         <div className="mt-4 px-5 anim-up delay-4">
           <button
             onClick={signOut}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-ink-50 bg-white py-3.5 text-[13px] font-bold text-coral transition active:scale-[.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-ink-50 bg-white py-3.5 text-[13px] font-bold text-ink transition active:scale-[.98]"
           >
             <LogOut className="h-4 w-4" />
             Sign out
@@ -429,9 +424,9 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
         {isAdmin && user && (
           <div className="px-4 pb-6 anim-up">
             <div className="flex items-center gap-2 mb-3 mt-4">
-              <span className="text-lg">⚙️</span>
+              <Settings className="h-5 w-5 text-ink" strokeWidth={2} />
               <h2 className="font-display text-[17px] font-bold text-ink">Admin Dashboard</h2>
-              <span className="ml-auto rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">Admin</span>
+              <span className="ml-auto rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wide">Admin</span>
             </div>
             <AdminErrorBoundary>
               <AdminPanel embedded />

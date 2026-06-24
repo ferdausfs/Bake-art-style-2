@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Edit3, Check, Download, RefreshCw, Star, Image as ImageIcon, Users, MapPin } from 'lucide-react';
+import { X, Plus, Trash2, Edit3, Check, Download, RefreshCw, Star, Image as ImageIcon, Users, MapPin, Clock, CheckCircle2, ChefHat, Package, Truck, PartyPopper, Cake, Lock } from 'lucide-react';
 import { useProducts } from '../hooks/useProducts';
 import { useOrdersHook } from '../hooks/useOrders';
 import { useGallery } from '../hooks/useGallery';
@@ -14,9 +14,15 @@ import type { Product, Order, Banner, CustomAddon } from '../types';
 type AdminTab = 'dashboard' | 'orders' | 'products' | 'banners' | 'gallery' | 'reviews' | 'customers' | 'zones' | 'settings';
 
 const STATUS_LABELS: Record<string, string> = {
-  placed: '🕐 Placed', confirmed: '✅ Confirmed',
-  baking: '👩‍🍳 Baking', ready: '📦 Ready', out: '🚗 Out for Delivery', delivered: '🎉 Delivered',
-  cancelled: '❌ Cancelled',
+  placed: 'Placed', confirmed: 'Confirmed',
+  baking: 'Baking', ready: 'Ready', out: 'Out for Delivery', delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
+const STATUS_ICON: Record<string, typeof Clock> = {
+  placed: Clock, confirmed: CheckCircle2,
+  baking: ChefHat, ready: Package, out: Truck, delivered: PartyPopper,
+  cancelled: X,
 };
 
 const EMPTY_PRODUCT = {
@@ -90,7 +96,9 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div className="glass-strong rounded-3xl p-8 w-full max-w-xs text-center">
-          <div className="text-4xl mb-3">🔐</div>
+          <div className="flex justify-center text-ink mb-3">
+            <Lock size={36} strokeWidth={1.75} />
+          </div>
           <h2 className="font-display text-lg font-bold text-ink mb-1">Admin Panel</h2>
           <p className="text-xs text-ink/50 mb-4">Enter your PIN</p>
           <input
@@ -115,15 +123,15 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
   const todayCount = safeOrders.filter((o) => o && o.createdAt && new Date(o.createdAt).toDateString() === new Date().toDateString()).length;
 
   const TABS: { id: AdminTab; label: string; badge?: number }[] = [
-    { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'orders', label: '📋 Orders', badge: pendingCount },
-    { id: 'products', label: '🧁 Products' },
-    { id: 'gallery', label: '🖼️ Gallery' },
-    { id: 'banners', label: '🖼️ Banners' },
-    { id: 'reviews', label: '⭐ Reviews', badge: safeReviews.filter((r) => r && !r.approved).length },
-    { id: 'customers', label: '👥 Customers', badge: safeCustomers.length },
-    { id: 'zones', label: '📍 Zones' },
-    { id: 'settings', label: '⚙️ Settings' },
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'orders', label: 'Orders', badge: pendingCount },
+    { id: 'products', label: 'Products' },
+    { id: 'gallery', label: 'Gallery' },
+    { id: 'banners', label: 'Banners' },
+    { id: 'reviews', label: 'Reviews', badge: safeReviews.filter((r) => r && !r.approved).length },
+    { id: 'customers', label: 'Customers', badge: safeCustomers.length },
+    { id: 'zones', label: 'Zones' },
+    { id: 'settings', label: 'Settings' },
   ];
 
   const ORDER_STATUSES: Order['status'][] = ['placed', 'confirmed', 'baking', 'ready', 'out', 'delivered', 'cancelled'];
@@ -161,6 +169,16 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
     a.click(); URL.revokeObjectURL(url);
   };
 
+  const StatusPill = ({ status, active }: { status: string; active?: boolean }) => {
+    const Icon = STATUS_ICON[status] ?? Clock;
+    return (
+      <span className={`inline-flex items-center gap-1 ${active ? '' : ''}`}>
+        <Icon className="w-3 h-3" strokeWidth={2} />
+        {STATUS_LABELS[status]}
+      </span>
+    );
+  };
+
   return (
     <div className={embedded
       ? "flex flex-col bg-cream rounded-3xl overflow-hidden border border-ink/8 mt-4"
@@ -169,7 +187,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-ink text-white flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xl">🎂</span>
+          <Cake className="w-5 h-5" strokeWidth={1.75} />
           <span className="font-bold text-sm">Admin Dashboard</span>
         </div>
         <div className="flex items-center gap-2">
@@ -321,8 +339,8 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                   {ORDER_STATUSES.map((s) => (
                     <button key={s}
                       onClick={() => updateStatus(o.id, s)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold ${o.status === s ? 'bg-coral text-white' : 'bg-ink/5 text-ink/45'}`}>
-                      {STATUS_LABELS[s]}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 ${o.status === s ? 'bg-coral text-white' : 'bg-ink/5 text-ink/45'}`}>
+                      <StatusPill status={s} />
                     </button>
                   ))}
                 </div>
@@ -394,7 +412,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                             : 'bg-ink/5 text-ink/50'
                         }`}
                       >
-                        {t === 'normal' ? '⚪ Normal' : t === 'premium' ? '⭐ Premium' : '✏️ Custom'}
+                        {t === 'normal' ? 'Normal' : t === 'premium' ? 'Premium' : 'Custom'}
                       </button>
                     ))}
                   </div>
@@ -467,7 +485,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                 {/* Additional Images (gallery) */}
                 <div className="space-y-2 border-t border-ink/5 pt-3">
                   <label className="text-[10px] font-bold text-ink/50 uppercase">Additional Images (gallery)</label>
-                  
+
                   {/* Thumbnail List */}
                   {editProduct.gallery && editProduct.gallery.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -485,7 +503,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                             }}
                             className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center transition active:scale-90"
                           >
-                            ✕
+                            <X className="w-3 h-3" />
                           </button>
                         </div>
                       ))}
@@ -525,7 +543,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                         }
                       }}
                     />
-                    
+
                     {(editProduct.gallery?.length ?? 0) < 4 ? (
                       <button
                         type="button"
@@ -594,7 +612,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                       onChange={(e) => setEditBanner({ ...editBanner, [f]: e.target.value })} />
                   </div>
                 ))}
-                
+
                 <div>
                   <label className="text-[10px] font-bold text-ink/50 uppercase">Type</label>
                   <select className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
@@ -796,7 +814,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
               return (
                 <div key={c.id} className="rounded-2xl bg-white p-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-coral-50 text-coral">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ink-50 text-ink-200">
                       {c.avatar ? <img src={c.avatar} alt="" className="h-full w-full rounded-full object-cover" /> : <Users className="h-5 w-5" />}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -804,7 +822,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                       <p className="truncate text-[11px] text-ink/45">{c.email || 'No email'} {c.phone ? `· ${c.phone}` : ''}</p>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[9px] font-bold text-ink/45 uppercase">{c.source || 'guest'}</span>
-                        <span className="rounded-full bg-coral/10 px-2 py-0.5 text-[9px] font-bold text-coral">{c.orderCount || 1} orders</span>
+                        <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[9px] font-bold text-ink/70">{c.orderCount || 1} orders</span>
                       </div>
                     </div>
                     <div className="text-right">
@@ -862,7 +880,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
               <div className="flex flex-wrap gap-2">
                 {(safeSettings.allowedZones ?? []).map((z) => (
                   <span key={z} className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-ink">
-                    <MapPin className="h-3 w-3 text-coral" /> {z}
+                    <MapPin className="h-3 w-3 text-ink-200" /> {z}
                     <button onClick={() => updateSettings({ allowedZones: (safeSettings.allowedZones ?? []).filter((x) => x !== z) })} className="text-ink/50">
                       <X className="h-3 w-3" />
                     </button>
@@ -941,7 +959,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                 <label className="text-[10px] font-bold text-ink/50 uppercase">Custom Cake Add-ons</label>
                 <button
                   onClick={() => {
-                    const newAddon: CustomAddon = { id: `addon-${Date.now()}`, emoji: '✨', label: 'New Add-on', price: 100, category: 'extras' };
+                    const newAddon: CustomAddon = { id: `addon-${Date.now()}`, emoji: '', label: 'New Add-on', price: 100, category: 'extras' };
                     updateSettings({ customAddons: [...(settings.customAddons ?? []), newAddon] });
                   }}
                   className="flex items-center gap-1 rounded-lg bg-coral px-2.5 py-1 text-[10px] font-bold text-white"
@@ -996,8 +1014,10 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                     </select>
                     <button
                       onClick={() => updateSettings({ customAddons: (settings.customAddons ?? []).filter((_, i) => i !== idx) })}
-                      className="h-6 w-6 rounded-lg bg-red-50 text-red-400 flex items-center justify-center text-xs font-bold"
-                    >✕</button>
+                      className="h-6 w-6 rounded-lg bg-red-50 text-red-400 flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
                 ))}
               </div>

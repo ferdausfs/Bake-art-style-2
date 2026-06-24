@@ -27,16 +27,16 @@ export default function WishlistScreen() {
         {list.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-16 text-center">
             <div
-              className="flex h-24 w-24 items-center justify-center rounded-3xl bg-coral-50"
-              style={{ boxShadow: '0 12px 30px -18px rgba(242,94,115,.4)' }}
+              className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white"
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 12px 30px -18px rgba(26,19,17,.14)' }}
             >
-              <Heart className="h-12 w-12 text-coral" strokeWidth={1.8} />
+              <Heart className="h-12 w-12 text-ink-200" strokeWidth={1.8} />
             </div>
             <h2 className="mt-5 font-display text-[22px] font-bold tracking-tight text-ink">
               Your wishlist is empty
             </h2>
             <p className="mt-1.5 max-w-xs text-[13px] text-ink-200">
-              Tap ❤️ on any cake to save it for later.
+              Tap the heart on any cake to save it for later.
             </p>
             <button onClick={back} className="btn-primary mt-6 h-12 rounded-2xl px-7 text-[13px] font-bold">
               Browse cakes

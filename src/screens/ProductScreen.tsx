@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Heart, Star, ShoppingBag, Check, Share2, Truck, Sparkles, Shield } from 'lucide-react';
+import { ArrowLeft, Heart, Star, ShoppingBag, Check, Share2, Truck, Sparkles, Shield, Cake, Pencil, CheckCircle2, Camera, X } from 'lucide-react';
 import { useUI, useCart, useUser, useAuthStore, formatINR } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useReviews } from '../hooks/useReviews';
@@ -73,7 +73,9 @@ export default function ProductScreen() {
   if (!product) {
     return (
       <div className="flex h-full flex-col items-center justify-center bg-cream px-6 text-center">
-        <div className="text-5xl">🎂</div>
+        <div className="flex justify-center text-ink-200 opacity-60">
+          <Cake size={48} strokeWidth={1.5} />
+        </div>
         <h2 className="mt-4 font-display text-[20px] font-bold text-ink">Cake not found</h2>
         <p className="mt-1 text-[12px] text-ink-200">This item may have been removed.</p>
         <button onClick={back} className="btn-primary mt-5 h-12 rounded-2xl px-6 text-[13px] font-bold">
@@ -188,9 +190,17 @@ export default function ProductScreen() {
               <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                 product.tier === 'premium'
                   ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-white'
-                  : 'bg-coral/15 text-coral'
+                  : 'bg-ink text-white'
               }`}>
-                {product.tier === 'premium' ? '⭐ Premium' : '✏️ Custom Order'}
+                {product.tier === 'premium' ? (
+                  <>
+                    <Star className="h-3 w-3" strokeWidth={2.5} /> Premium
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="h-3 w-3" strokeWidth={2.5} /> Custom Order
+                  </>
+                )}
               </span>
             )}
           </div>
@@ -251,19 +261,17 @@ export default function ProductScreen() {
                     placeholder={`Enter weight in ${product.priceUnit ?? 'kg'}`}
                     className="flex-1 px-3 py-2.5 rounded-xl border-2 border-ink/10 bg-cream text-sm font-bold text-ink focus:border-coral focus:outline-none"
                     value={customWeight}
-                    onChange={(e) => { setCustomWeight(e.target.value); setWeightError(''); }}
+                    onChange={(e) => setCustomWeight(e.target.value)}
                   />
                   <span className="text-sm font-bold text-ink/50">{product.priceUnit ?? 'kg'}</span>
                 </div>
                 {weightError && (
-                  <p className="text-[11px] text-red-500 font-semibold">{weightError}</p>
+                  <div className="text-[11px] text-red-500 font-semibold">{weightError}</div>
                 )}
                 {customWeight && +customWeight > 0 && (
-                  <div className="rounded-2xl bg-coral/8 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-ink/60">{customWeight} {product.priceUnit ?? 'kg'} × ৳{product.pricePerUnit}</span>
-                    <span className="font-display text-lg font-bold text-coral">
-                      ৳{(+customWeight * product.pricePerUnit).toLocaleString()}
-                    </span>
+                  <div className="mt-2 rounded-xl bg-ink-50 px-3 py-2 flex items-center justify-between">
+                    <span className="text-[11px] text-ink/60">{customWeight} {product.priceUnit ?? 'kg'} × ৳{product.pricePerUnit}</span>
+                    <span className="font-display text-base font-bold text-ink">৳{(+customWeight * (product.pricePerUnit ?? 0)).toLocaleString()}</span>
                   </div>
                 )}
               </div>
@@ -329,7 +337,7 @@ export default function ProductScreen() {
           {/* Customise CTA */}
           <button
             onClick={() => go({ name: 'customize', productId: product.id })}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-coral-300 bg-coral-50/40 py-3.5 text-[13.5px] font-bold text-coral transition active:scale-[.98]"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink-100 bg-cream py-3.5 text-[13.5px] font-bold text-ink transition active:scale-[.98]"
           >
             <Sparkles className="h-4 w-4" />
             Fully customize this cake
@@ -344,7 +352,7 @@ export default function ProductScreen() {
           {!showReviewForm && (
             <button
               onClick={() => setShowReviewForm(true)}
-              className="rounded-xl bg-coral/10 px-3 py-1.5 text-[11px] font-bold text-coral"
+              className="rounded-xl bg-ink-50 px-3 py-1.5 text-[11px] font-bold text-ink"
             >
               + Write a review
             </button>
@@ -353,8 +361,9 @@ export default function ProductScreen() {
 
         {/* Success message */}
         {reviewSuccess && (
-          <div className="mb-3 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-[12px] text-emerald-700 font-semibold">
-            ✅ Review submitted! It'll appear after admin approval.
+          <div className="mb-3 flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-[12px] text-emerald-700 font-semibold">
+            <CheckCircle2 className="h-4 w-4" />
+            Review submitted! It'll appear after admin approval.
           </div>
         )}
 
@@ -384,18 +393,20 @@ export default function ProductScreen() {
             />
             {/* Photo upload */}
             <div>
-              <div className="text-[11px] font-bold text-ink/50 mb-1">📸 Add photo (optional)</div>
+              <div className="text-[11px] font-bold text-ink/50 mb-1">Add photo (optional)</div>
               {reviewImagePreview ? (
                 <div className="relative w-20 h-20">
                   <img src={reviewImagePreview} alt="" className="w-20 h-20 rounded-xl object-cover" />
                   <button
                     onClick={() => { setReviewImageFile(null); setReviewImagePreview(''); }}
-                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-ink text-white text-[10px] flex items-center justify-center"
-                  >✕</button>
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-ink text-white flex items-center justify-center"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ) : (
-                <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-ink/20 bg-cream text-2xl hover:border-coral">
-                  📷
+                <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-ink/20 bg-cream hover:border-coral">
+                  <Camera className="h-6 w-6 text-ink-200" strokeWidth={1.5} />
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -433,7 +444,7 @@ export default function ProductScreen() {
               <div key={r.id} className="rounded-2xl bg-white p-4"
                 style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 4px 12px -8px rgba(26,19,17,.12)' }}>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-coral/10 font-bold text-coral text-[13px]">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-ink-50 font-bold text-ink text-[13px]">
                     {r.user_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -459,7 +470,7 @@ export default function ProductScreen() {
           </div>
         ) : (
           <div className="text-center py-6 text-[13px] text-ink/40">
-            No reviews yet. Be the first! 🎂
+            No reviews yet. Be the first!
           </div>
         )}
       </section>
@@ -526,7 +537,7 @@ export default function ProductScreen() {
 function Trust({ icon: Icon, label }: { icon: any; label: string }) {
   return (
     <div className="flex items-center gap-1.5 text-[11px] font-medium text-ink-200">
-      <Icon className="h-3.5 w-3.5 text-coral" strokeWidth={2} />
+      <Icon className="h-3.5 w-3.5 text-ink-200" strokeWidth={2} />
       {label}
     </div>
   );

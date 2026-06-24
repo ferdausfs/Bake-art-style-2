@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield, Navigation, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield, Navigation, Loader2, Phone, Banknote, ShoppingCart, Gift } from 'lucide-react';
 import {
   useCart, useOrders, useUI, formatINR,
   cartSubtotal, standardDeliveryFee,
@@ -10,9 +10,9 @@ import {
 import { LocationGate } from '../components/LocationGate';
 
 const PAYMENTS = [
-  { id: 'bkash', label: 'bKash', sub: 'Send money / Payment', emoji: '📱' },
-  { id: 'nagad', label: 'Nagad', sub: 'Send money / Payment', emoji: '📲' },
-  { id: 'cash',  label: 'Cash on Delivery', sub: 'ডেলিভারির সময় পেমেন্ট', emoji: '💵' },
+  { id: 'bkash', label: 'bKash', sub: 'Send money / Payment', Icon: Phone },
+  { id: 'nagad', label: 'Nagad', sub: 'Send money / Payment', Icon: Phone },
+  { id: 'cash',  label: 'Cash on Delivery', sub: 'ডেলিভারির সময় পেমেন্ট', Icon: Banknote },
 ] as const;
 
 const BD_DISTRICTS = [
@@ -62,7 +62,7 @@ export default function CheckoutScreen({ onBack }: Props) {
         if (!next.name && user.name) {
           next.name = user.name;
         }
-        
+
         const recentOrder = orders.find(
           (o) =>
             o.userId === user.id ||
@@ -109,7 +109,7 @@ export default function CheckoutScreen({ onBack }: Props) {
     setLocateError('');
     try {
       if (!navigator.geolocation) {
-        throw new Error('জিপিএস সমর্থিত নয়');
+        throw new Error('জিপিএস সমর্থিত নয়');
       }
       const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
@@ -117,7 +117,7 @@ export default function CheckoutScreen({ onBack }: Props) {
       const { latitude: lat, longitude: lng } = pos.coords;
       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
       if (!r.ok) {
-        throw new Error('সার্ভার থেকে এড্রেস পাওয়া যায়নি');
+        throw new Error('সার্ভার থেকে এড্রেস পাওয়া যায়নি');
       }
       const data = await r.json();
       const city =
@@ -143,7 +143,7 @@ export default function CheckoutScreen({ onBack }: Props) {
       });
     } catch (e: any) {
       console.warn('Geolocation failed:', e);
-      setLocateError('লোকেশন শনাক্ত করা যায়নি, অনুগ্রহ করে ম্যানুয়ালি লিখুন।');
+      setLocateError('লোকেশন শনাক্ত করা যায়নি, অনুগ্রহ করে ম্যানুয়ালি লিখুন।');
     } finally {
       setLocating(false);
     }
@@ -180,7 +180,9 @@ export default function CheckoutScreen({ onBack }: Props) {
       <div className="flex h-full flex-col bg-cream">
         <Header title="চেকআউট" onBack={handleBack} />
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-          <div className="text-5xl">🛒</div>
+          <div className="flex justify-center text-ink-200 opacity-60">
+            <ShoppingCart size={48} strokeWidth={1.5} />
+          </div>
           <h2 className="mt-4 font-display text-[20px] font-bold text-ink">কার্ট খালি</h2>
           <p className="mt-1 text-[12px] text-ink-200">আগে একটা কেক যোগ করুন।</p>
           <button onClick={handleBack} className="btn-primary mt-5 h-12 rounded-2xl px-6 text-[13px] font-bold">
@@ -236,14 +238,14 @@ export default function CheckoutScreen({ onBack }: Props) {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="h-11 w-full rounded-xl border border-ink-50 bg-white px-3 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
             />
-            
+
             {/* GPS Button */}
             <div className="flex flex-col gap-1.5 pt-0.5">
               <button
                 type="button"
                 onClick={handleLocate}
                 disabled={locating}
-                className="flex items-center justify-center gap-1.5 self-start rounded-full bg-coral-50/60 px-3.5 py-1.5 text-[11px] font-bold text-coral transition hover:bg-coral-50 active:scale-95 disabled:opacity-50"
+                className="flex items-center justify-center gap-1.5 self-start rounded-full bg-ink-50 px-3.5 py-1.5 text-[11px] font-bold text-ink transition hover:bg-ink-100 active:scale-95 disabled:opacity-50"
               >
                 {locating ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -297,7 +299,7 @@ export default function CheckoutScreen({ onBack }: Props) {
               >
                 {s.v}
                 {s.hot && form.time !== s.v && (
-                  <span className="absolute -top-1.5 -right-1.5 rounded-full bg-coral px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
+                  <span className="absolute -top-1.5 -right-1.5 rounded-full bg-ink px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
                     Popular
                   </span>
                 )}
@@ -314,7 +316,7 @@ export default function CheckoutScreen({ onBack }: Props) {
             onClick={() => setGiftMode(!giftMode)}
           >
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🎁</span>
+              <Gift className="h-6 w-6 text-ink" strokeWidth={1.75} />
               <div>
                 <div className="text-[13px] font-bold text-ink">This is a gift order</div>
                 <div className="text-[11px] text-ink/50">Add message, gift wrap & recipient details</div>
@@ -330,7 +332,7 @@ export default function CheckoutScreen({ onBack }: Props) {
               style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 4px 12px -8px rgba(26,19,17,.12)' }}>
               <textarea
                 maxLength={200}
-                placeholder="Write a heartfelt message... 💝"
+                placeholder="Write a heartfelt message..."
                 className="w-full resize-none rounded-xl border border-ink/10 bg-cream px-3 py-2.5 text-[13px] text-ink placeholder:text-ink/30 focus:border-coral focus:outline-none"
                 rows={3}
                 value={gift.message}
@@ -340,7 +342,7 @@ export default function CheckoutScreen({ onBack }: Props) {
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={gift.wrap} onChange={(e) => setGift(g => ({ ...g, wrap: e.target.checked }))}
                   className="h-4 w-4 rounded accent-coral" />
-                <span className="text-[13px] text-ink">🎀 Gift wrap <span className="text-coral font-bold">+৳50</span></span>
+                <span className="text-[13px] text-ink">Gift wrap <span className="text-coral font-bold">+৳50</span></span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={gift.hidePrice} onChange={(e) => setGift(g => ({ ...g, hidePrice: e.target.checked }))}
@@ -372,8 +374,8 @@ export default function CheckoutScreen({ onBack }: Props) {
                     : 'border-ink-50 bg-white'
                 }`}
               >
-                <div className="flex h-10 w-12 items-center justify-center rounded-lg bg-ink text-xl">
-                  {p.emoji}
+                <div className="flex h-10 w-12 items-center justify-center rounded-lg bg-ink text-white">
+                  <p.Icon className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <div className="flex-1">
                   <div className="text-[13px] font-bold text-ink">{p.label}</div>
@@ -407,7 +409,7 @@ export default function CheckoutScreen({ onBack }: Props) {
                 positive
               />
             )}
-            {giftMode && gift.wrap && <Row label="🎀 Gift wrap" value={formatINR(50)} />}
+            {giftMode && gift.wrap && <Row label="Gift wrap" value={formatINR(50)} />}
             <div className="h-px bg-ink-50" />
             <div className="flex items-center justify-between pt-1">
               <span className="font-display text-[15px] font-bold tracking-tight text-ink">মোট</span>
@@ -475,13 +477,13 @@ function Section({
     >
       <div className="flex items-center gap-2.5 border-b border-ink-50 px-4 py-3">
         {Icon && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-coral-50 text-coral">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200">
             <Icon className="h-4 w-4" strokeWidth={2} />
           </div>
         )}
         <h3 className="font-display text-[14px] font-bold tracking-tight text-ink">{title}</h3>
         {badge && (
-          <span className="ml-auto rounded-full bg-coral-50 px-2 py-0.5 text-[10px] font-bold text-coral">
+          <span className="ml-auto rounded-full bg-ink-50 px-2 py-0.5 text-[10px] font-bold text-ink-200">
             {badge}
           </span>
         )}

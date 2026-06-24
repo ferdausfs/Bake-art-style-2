@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Check, Package, ChefHat, Truck, Receipt, Search } from 'lucide-react';
+import { Check, Package, ChefHat, Truck, Receipt, Search, RefreshCw } from 'lucide-react';
 import { useUI, formatINR, useAuthStore, useCart } from '../lib/store';
 import { useOrdersHook } from '../hooks/useOrders';
 import { isSupabaseConfigured } from '../lib/utils';
@@ -41,7 +41,7 @@ export default function OrdersScreen() {
           <div className="flex flex-col items-center justify-center pt-16 text-center anim-fade">
             <div className="flex gap-1.5 justify-center py-4">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-coral" style={{ animationDelay: `${i * 0.15}s` }} />
+                <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-ink-200" style={{ animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
             <p className="text-[12px] text-ink-200">Loading your orders...</p>
@@ -49,10 +49,10 @@ export default function OrdersScreen() {
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-16 text-center anim-fade">
             <div
-              className="flex h-24 w-24 items-center justify-center rounded-3xl bg-coral-50 text-5xl"
-              style={{ boxShadow: '0 12px 30px -18px rgba(242,94,115,.4)' }}
+              className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white"
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 12px 30px -18px rgba(26,19,17,.14)' }}
             >
-              📦
+              <Package size={48} strokeWidth={1.5} className="text-ink-200" />
             </div>
             <h2 className="mt-5 font-display text-[22px] font-bold tracking-tight text-ink">
               No orders yet
@@ -120,7 +120,7 @@ export default function OrdersScreen() {
                   {/* Progress */}
                   <div className="border-t border-ink-50 px-4 py-3.5">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-[10px] font-bold tracking-wider text-coral uppercase">
+                      <span className="text-[10px] font-bold tracking-wider text-ink-200 uppercase">
                         Live status
                       </span>
                       <span className="text-[12px] font-bold capitalize text-ink">
@@ -161,7 +161,7 @@ export default function OrdersScreen() {
                     </div>
                     <button
                       onClick={() => go({ name: 'tracking', orderId: o.id })}
-                      className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-coral-50 text-[12px] font-bold text-coral transition active:scale-[.98]"
+                      className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-ink-50 text-[12px] font-bold text-ink transition active:scale-[.98]"
                     >
                       <Search className="h-4 w-4" /> Open tracking
                     </button>
@@ -169,14 +169,14 @@ export default function OrdersScreen() {
                       onClick={() => {
                         o.items.forEach((item) => useCart.getState().add({ ...item }));
                         useUI.getState().addNotification(
-                          '🛒 Added to cart!',
+                          'Added to cart!',
                           `${o.items.length} item${o.items.length > 1 ? 's' : ''} from Order #${o.id} added to cart.`
                         );
                         setTimeout(() => go({ name: 'cart' }), 600);
                       }}
                       className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-[12px] font-bold text-white transition active:scale-[.98]"
                     >
-                      🔄 Order Again
+                      <RefreshCw className="h-4 w-4" /> Order Again
                     </button>
                   </div>
                 </article>

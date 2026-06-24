@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Sparkles, Truck, Shield } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Sparkles, Truck, Shield, ShoppingCart, Star } from 'lucide-react';
 import {
   useCart,
   useUI,
@@ -40,10 +40,10 @@ export default function CartScreen() {
         <Header title="My cart" onBack={back} />
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
           <div
-            className="flex h-24 w-24 items-center justify-center rounded-3xl bg-coral-50 text-5xl"
-            style={{ boxShadow: '0 12px 30px -18px rgba(242,94,115,.4)' }}
+            className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white text-ink-200"
+            style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 12px 30px -18px rgba(26,19,17,.14)' }}
           >
-            🛒
+            <ShoppingCart size={44} strokeWidth={1.5} />
           </div>
           <h2 className="mt-5 font-display text-[22px] font-bold tracking-tight text-ink">
             Your cart is empty
@@ -71,7 +71,7 @@ export default function CartScreen() {
         {remaining > 0 ? (
           <div className="mb-4 rounded-2xl bg-white p-3.5" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 8px 24px -16px rgba(26,19,17,.16)' }}>
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral-50 text-coral">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-50 text-ink-200">
                 <Truck className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="flex-1">
@@ -80,7 +80,7 @@ export default function CartScreen() {
                 </div>
                 <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink-50">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-coral-400 to-coral"
+                    className="h-full rounded-full bg-gradient-to-r from-ink-200 to-ink-300"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -90,7 +90,7 @@ export default function CartScreen() {
         ) : (
           <div className="mb-4 flex items-center gap-2.5 rounded-2xl bg-emerald-50 px-3.5 py-3 text-emerald-700">
             <Shield className="h-4 w-4" />
-            <span className="text-[12.5px] font-bold">You unlocked free delivery 🎉</span>
+            <span className="text-[12.5px] font-bold">You unlocked free delivery</span>
           </div>
         )}
 
@@ -157,7 +157,7 @@ export default function CartScreen() {
           <div className="mx-4 mt-4 rounded-2xl overflow-hidden border border-amber-200 bg-amber-50">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">⭐</span>
+                <Star className="h-5 w-5 text-amber-500" strokeWidth={2} />
                 <div>
                   <div className="text-[12px] font-bold text-amber-800">
                     You have {points.toLocaleString()} points
@@ -209,8 +209,8 @@ export default function CartScreen() {
 
         {/* Promo */}
         <div className="mt-4">
-          <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-coral-300 bg-coral-50/30 px-3.5 py-3">
-            <Tag className="h-4 w-4 text-coral" />
+          <div className="flex items-center gap-2.5 rounded-2xl border border-dashed border-ink-100 bg-white px-3.5 py-3">
+            <Tag className="h-4 w-4 text-ink-200" />
             <input
               value={code}
               onChange={(e) => {
@@ -235,7 +235,7 @@ export default function CartScreen() {
                   clearPromo();
                 }
               }}
-              className="text-[11.5px] font-bold uppercase tracking-wider text-coral"
+              className="text-[11.5px] font-bold uppercase tracking-wider text-ink hover:text-coral"
             >
               Apply
             </button>
@@ -276,7 +276,7 @@ export default function CartScreen() {
             )}
             {loyaltyRedeemed > 0 && (
               <Row
-                label={`⭐ Points (${loyaltyRedeemed.toLocaleString()} pts)`}
+                label={`Points (${loyaltyRedeemed.toLocaleString()} pts)`}
                 value={'-' + formatINR(Math.round(loyaltyRedeemed / 1000 * 50))}
                 positive
               />
@@ -327,7 +327,7 @@ function Header({ title, onBack, badge }: { title: string; onBack: () => void; b
       <div className="flex items-center gap-2">
         <h1 className="font-display text-[16px] font-bold tracking-tight text-ink">{title}</h1>
         {badge && (
-          <span className="rounded-full bg-coral-50 px-2 py-0.5 text-[11px] font-bold text-coral">
+          <span className="rounded-full bg-ink-50 px-2 py-0.5 text-[11px] font-bold text-ink-200">
             {badge}
           </span>
         )}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Package } from 'lucide-react';
 import { useUI, useAuthStore, useSettingsStore, pushBrowserRouteState } from './lib/store';
 import { isSupabaseConfigured } from './lib/utils';
 import PhoneFrame from './components/PhoneFrame';
@@ -45,7 +46,7 @@ export default function App() {
     // 2. Popstate listener to handle back gestures
     const handlePopState = () => {
       const { history: uiHistory, back: uiBack } = useUI.getState();
-      
+
       if (uiHistory.length > 0) {
         uiBack();
         pushBrowserRouteState();
@@ -93,7 +94,9 @@ export default function App() {
           {view.name === 'tabs' && activeTab === 'orders'     && (
             user ? <OrdersScreen /> : (
               <div className="flex flex-col h-full items-center justify-center gap-4 p-8 text-center">
-                <div className="text-5xl">📋</div>
+                <div className="text-ink-200 opacity-60">
+                  <Package size={48} strokeWidth={1.5} />
+                </div>
                 <p className="font-bold text-ink text-lg">Sign in to view orders</p>
                 <button onClick={() => setAuthOpen(true)}
                   className="px-6 py-3 rounded-2xl bg-coral text-white font-bold text-sm">

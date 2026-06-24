@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Package, Search } from 'lucide-react';
+import { ArrowLeft, Package, Search, ShoppingCart, CheckCircle2, Flame, Cake, Truck, PartyPopper } from 'lucide-react';
 import { useUI, formatINR, useAuthStore } from '../lib/store';
 import { useOrdersHook } from '../hooks/useOrders';
 import { isSupabaseConfigured } from '../lib/utils';
 import type { Order } from '../types';
+
+const TIMELINE_STEPS: { key: string; Icon: typeof ShoppingCart; label: string; sub: string }[] = [
+  { key: 'placed',    Icon: ShoppingCart, label: 'Order Placed',      sub: 'We received your order' },
+  { key: 'confirmed', Icon: CheckCircle2, label: 'Baker Assigned',     sub: 'A baker is on it' },
+  { key: 'baking',    Icon: Flame,        label: 'Baking Started',     sub: 'Your cake is in the oven' },
+  { key: 'ready',     Icon: Cake,         label: 'Quality Check',      sub: 'Almost ready!' },
+  { key: 'out',       Icon: Truck,        label: 'Out for Delivery',   sub: 'On the way to you' },
+  { key: 'delivered', Icon: PartyPopper,  label: 'Delivered',          sub: 'Enjoy your cake!' },
+];
+
+const STATUS_ORDER = TIMELINE_STEPS.map((s) => s.key);
 
 export default function TrackingScreen() {
   const { view, back, setTab } = useUI();
@@ -59,7 +70,7 @@ export default function TrackingScreen() {
           <div className="flex flex-col items-center justify-center pt-16 text-center anim-fade">
             <div className="flex gap-1.5 justify-center py-4">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-coral" style={{ animationDelay: `${i * 0.15}s` }} />
+                <div key={i} className="h-2 w-2 animate-bounce rounded-full bg-ink-200" style={{ animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
             <p className="text-[12px] text-ink-200">Syncing orders...</p>
@@ -99,36 +110,33 @@ export default function TrackingScreen() {
 
             <div className="border-t border-ink-50 px-4 py-3.5">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-wider text-coral uppercase">Live status</span>
+                <span className="text-[10px] font-bold tracking-wider text-ink-200 uppercase">Live status</span>
                 <span className="text-[12px] font-bold capitalize text-ink">{match.status}</span>
               </div>
               {/* Vertical timeline */}
               <div className="mt-3 space-y-0">
-                {[
-                  { key: 'placed',    icon: '🛒', label: 'Order Placed',      sub: 'We received your order' },
-                  { key: 'confirmed', icon: '✅', label: 'Baker Assigned',     sub: 'A baker is on it' },
-                  { key: 'baking',    icon: '🔥', label: 'Baking Started',     sub: 'Your cake is in the oven' },
-                  { key: 'ready',     icon: '🎂', label: 'Quality Check',      sub: 'Almost ready!' },
-                  { key: 'out',       icon: '🚗', label: 'Out for Delivery',   sub: 'On the way to you' },
-                  { key: 'delivered', icon: '🎉', label: 'Delivered',          sub: 'Enjoy your cake!' },
-                ].map((step, i, arr) => {
-                  const statusOrder = ['placed','confirmed','baking','ready','out','delivered'];
-                  const currentIdx = statusOrder.indexOf(match.status);
-                  const stepIdx = statusOrder.indexOf(step.key);
+                {TIMELINE_STEPS.map((step, i, arr) => {
+                  const currentIdx = STATUS_ORDER.indexOf(match.status);
+                  const stepIdx = STATUS_ORDER.indexOf(step.key);
                   const done = stepIdx <= currentIdx;
                   const active = stepIdx === currentIdx;
                   const isLast = i === arr.length - 1;
+                  const StepIcon = step.Icon;
                   return (
                     <div key={step.key} className="flex gap-3">
                       {/* Left: icon + connector */}
                       <div className="flex flex-col items-center">
-                        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[18px] transition-all ${
-                          done ? active ? 'ring-2 ring-coral ring-offset-2 scale-110' : 'opacity-100' : 'opacity-30 grayscale'
+                        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all ${
+                          done
+                            ? active
+                              ? 'bg-coral text-white ring-2 ring-coral ring-offset-2 scale-110'
+                              : 'bg-coral/15 text-coral'
+                            : 'bg-ink-50 text-ink-200'
                         }`}>
-                          {step.icon}
+                          <StepIcon className="h-4 w-4" strokeWidth={2} />
                         </div>
                         {!isLast && (
-                          <div className={`w-0.5 flex-1 my-1 rounded-full ${done && !active ? 'bg-coral' : 'bg-ink/10'}`}
+                          <div className={`w-0.5 flex-1 my-1 rounded-full ${done && !active ? 'bg-coral/30' : 'bg-ink-50'}`}
                             style={{ minHeight: 20 }} />
                         )}
                       </div>
@@ -139,18 +147,24 @@ export default function TrackingScreen() {
                         {active && match.status === 'out' && (
                           <div className="mt-2 overflow-hidden rounded-xl bg-coral/8 px-3 py-2">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-[11px] font-bold text-coral">On the way 🚗</span>
+                              <span className="text-[11px] font-bold text-coral flex items-center gap-1.5">
+                                <Truck className="h-3 w-3" /> On the way
+                              </span>
                               <span className="text-[11px] text-ink/50">~15-20 mins</span>
                             </div>
                             {/* Truck progress animation */}
                             <div className="relative h-2 rounded-full bg-ink/10">
                               <div className="absolute inset-y-0 left-0 w-3/4 rounded-full bg-coral" />
-                              <div className="absolute -top-1 text-[16px]" style={{ left: 'calc(75% - 10px)', animation: 'bounce 1s infinite' }}>🚗</div>
+                              <Truck
+                                className="absolute -top-1 h-4 w-4 text-coral"
+                                style={{ left: 'calc(75% - 8px)', animation: 'bounce 1s infinite' }}
+                                strokeWidth={2}
+                              />
                             </div>
                           </div>
                         )}
                         {active && match.status === 'delivered' && (
-                          <div className="mt-1 text-[11px] font-bold text-green-600">Delivered successfully! 🎉</div>
+                          <div className="mt-1 text-[11px] font-bold text-green-600">Delivered successfully!</div>
                         )}
                       </div>
                     </div>
@@ -161,14 +175,16 @@ export default function TrackingScreen() {
           </article>
         ) : query.trim() ? (
           <div className="mt-8 text-center">
-            <div className="text-5xl">🔎</div>
+            <div className="flex justify-center text-ink-200 opacity-60">
+              <Search size={44} strokeWidth={1.5} />
+            </div>
             <p className="mt-2 text-[14px] font-medium text-ink-300">Order not found</p>
             <p className="text-[12px] text-ink-200">Please check the order ID and try again.</p>
           </div>
         ) : (
           <div className="mt-8 text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-coral-50">
-              <Package className="h-10 w-10 text-coral" strokeWidth={1.8} />
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white" style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 12px 30px -18px rgba(26,19,17,.14)' }}>
+              <Package className="h-10 w-10 text-ink-200" strokeWidth={1.8} />
             </div>
             <p className="mt-3 text-[13px] text-ink-200">
               Enter an order ID to see live status. You can also open tracking from your Orders page.

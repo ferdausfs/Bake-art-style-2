@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Navigation, MessageCircle, X } from 'lucide-react';
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Navigation, MessageCircle, X, Cake } from 'lucide-react';
 import { useLocation, useSettingsStore } from '../lib/store';
 import { waLink } from '../lib/utils';
 import { matchZone } from '../lib/zones';
@@ -65,14 +65,16 @@ export function LocationGate({ onDismiss }: Props) {
           <X className="w-4 h-4 text-black/40" />
         </button>
 
-        <div className="text-4xl mb-2">🎂</div>
-        <h1 className="text-xl font-black text-coral mb-1">Bake Art Style</h1>
+        <div className="flex justify-center text-ink mb-2">
+          <Cake size={40} strokeWidth={1.5} />
+        </div>
+        <h1 className="text-xl font-black text-ink mb-1">Bake Art Style</h1>
         <p className="text-xs text-black/40 mb-6">কুমিল্লা থেকে ভালোবাসা দিয়ে তৈরি</p>
 
         {status === 'idle' && (
           <div className="space-y-4">
-            <div className="w-16 h-16 rounded-full bg-coral/10 flex items-center justify-center mx-auto">
-              <MapPin className="w-8 h-8 text-coral" />
+            <div className="w-16 h-16 rounded-full bg-ink-50 flex items-center justify-center mx-auto">
+              <MapPin className="w-8 h-8 text-ink" />
             </div>
             <h2 className="font-bold text-ink">ডেলিভারি জোন চেক করুন</h2>
             <p className="text-sm text-ink/60">পেমেন্টের আগে আমরা যাচাই করবো আপনার এলাকায় ডেলিভারি দিতে পারি কিনা।</p>
@@ -86,7 +88,7 @@ export function LocationGate({ onDismiss }: Props) {
 
         {(status === 'requesting' || status === 'detecting') && (
           <div className="space-y-3">
-            <Loader2 className="w-12 h-12 text-coral animate-spin mx-auto" />
+            <Loader2 className="w-12 h-12 text-ink animate-spin mx-auto" />
             <h2 className="font-bold text-ink">
               {status === 'requesting' ? 'লোকেশন নেওয়া হচ্ছে...' : 'এলাকা শনাক্ত করা হচ্ছে...'}
             </h2>
@@ -97,7 +99,7 @@ export function LocationGate({ onDismiss }: Props) {
         {status === 'allowed' && (
           <div className="space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-            <h2 className="font-bold text-ink">আমরা {district}-এ ডেলিভারি দিই! 🎉</h2>
+            <h2 className="font-bold text-ink">আমরা {district}-এ ডেলিভারি দিই!</h2>
             <p className="text-sm text-ink/60">চেকআউটে নিয়ে যাওয়া হচ্ছে...</p>
           </div>
         )}
@@ -117,7 +119,7 @@ export function LocationGate({ onDismiss }: Props) {
               <p className="text-[10px] text-ink/40 mb-2">আমরা বর্তমানে ডেলিভারি দিই:</p>
               <div className="flex flex-wrap gap-1.5">
                 {(settings.allowedZones ?? []).map((z) => (
-                  <span key={z} className="px-2 py-0.5 rounded-full bg-coral/10 text-coral text-[10px] font-bold">{z}</span>
+                  <span key={z} className="px-2 py-0.5 rounded-full bg-ink-50 text-ink-200 text-[10px] font-bold">{z}</span>
                 ))}
               </div>
             </div>

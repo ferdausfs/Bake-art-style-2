@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { X, Eye, EyeOff, Loader2, User, Mail } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface Props {
@@ -51,8 +51,12 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[61] glass-strong rounded-t-3xl p-6 shadow-2xl">
           <div className="w-10 h-1 bg-[var(--color-ink)]/10 rounded-full mx-auto mb-5" />
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-[var(--color-coral)]/10 flex items-center justify-center text-3xl mx-auto mb-3">
-              {user.avatar || '👤'}
+            <div className="w-16 h-16 rounded-full bg-[var(--color-coral)]/10 flex items-center justify-center mx-auto mb-3">
+              {user.avatar && user.avatar.length > 2 ? (
+                <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <User className="w-8 h-8 text-[var(--color-coral)]" strokeWidth={1.75} />
+              )}
             </div>
             <p className="font-bold text-[var(--color-ink)] text-lg">{user.name}</p>
             {user.email && <p className="text-sm text-[var(--color-ink)]/50">{user.email}</p>}
@@ -164,7 +168,9 @@ export function AuthSheet({ open, onClose, onSuccess }: Props) {
 
           {needsConfirmation ? (
             <div className="text-center py-4 space-y-4">
-              <div className="text-5xl">📩</div>
+              <div className="flex justify-center text-[var(--color-coral)]">
+                <Mail size={48} strokeWidth={1.5} />
+              </div>
               <p className="text-sm text-[var(--color-ink)]/70 font-medium">
                 We have sent a verification link to <span className="font-bold text-[var(--color-ink)]">{email}</span>. Please click the link to confirm your account before signing in.
               </p>

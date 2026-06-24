@@ -1,10 +1,18 @@
-import { Check, Home, Receipt } from 'lucide-react';
+import { Check, Home, Receipt, Star, Cake, Sparkles, Heart, Truck, PartyPopper } from 'lucide-react';
 import { useUI, useLoyalty } from '../lib/store';
 
 export default function SuccessScreen() {
   const { view, setTab, go } = useUI();
   const { points } = useLoyalty();
   const orderId = view.name === 'success' ? view.orderId : '';
+
+  const timelineIcons: { Icon: typeof Cake; }[] = [
+    { Icon: Cake },
+    { Icon: Sparkles },
+    { Icon: Heart },
+    { Icon: Truck },
+    { Icon: PartyPopper },
+  ];
 
   return (
     <div className="mesh-warm relative flex h-full flex-col items-center justify-between overflow-hidden px-7 pt-12 pb-10">
@@ -45,7 +53,7 @@ export default function SuccessScreen() {
 
         {/* Points earned */}
         <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 anim-rise delay-4 flex items-center gap-2">
-          <span className="text-xl">⭐</span>
+          <Star className="h-5 w-5 text-amber-500" strokeWidth={2} />
           <div>
             <div className="text-[12px] font-bold text-amber-700">Points earned!</div>
             <div className="text-[11px] text-amber-600">You now have {points.toLocaleString()} loyalty points</div>
@@ -53,9 +61,9 @@ export default function SuccessScreen() {
         </div>
 
         {/* Timeline */}
-        <div className="mt-6 flex items-center gap-1 anim-rise delay-4">
-          {['🎂', '✨', '💝', '🚚', '🎉'].map((e, i) => (
-            <span key={i} className="text-[18px]">{e}</span>
+        <div className="mt-6 flex items-center gap-3 anim-rise delay-4 text-ink-200">
+          {timelineIcons.map((t, i) => (
+            <t.Icon key={i} className="h-4 w-4" strokeWidth={1.75} />
           ))}
         </div>
       </div>

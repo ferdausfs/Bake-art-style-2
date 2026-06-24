@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Search } from 'lucide-react';
 import { useUI, useUser } from '../lib/store';
 import { categories } from '../lib/data';
 import { useProducts } from '../hooks/useProducts';
@@ -7,7 +7,7 @@ import SearchBar from '../components/SearchBar';
 import ProductCard from '../components/ProductCard';
 import OccasionIcon from '../components/OccasionIcon';
 
-const ALL_CAT = { id: 'all' as const, name: 'All', icon: '✨' };
+const ALL_CAT = { id: 'all' as const, name: 'All' };
 
 export default function CategoriesScreen() {
   const { go } = useUI();
@@ -71,7 +71,9 @@ export default function CategoriesScreen() {
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-5xl">🔍</div>
+            <div className="flex justify-center text-ink-200 opacity-60">
+              <Search size={44} strokeWidth={1.5} />
+            </div>
             <p className="mt-2 text-[14px] font-medium text-ink-300">No cakes found</p>
             <p className="text-[12px] text-ink-200">Try a different search or category</p>
           </div>

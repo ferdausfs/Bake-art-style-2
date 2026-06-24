@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Sparkles, ChevronLeft, ChevronRight, Megaphone, RefreshCw } from 'lucide-react';
 import { useUI, useUser, useOrders } from '../lib/store';
 import { categories } from '../lib/data';
 import { useProducts } from '../hooks/useProducts';
@@ -12,7 +12,7 @@ import BrandLogo from '../components/BrandLogo';
 import OccasionIcon from '../components/OccasionIcon';
 import type { Banner } from '../types';
 
-const ALL_CAT = { id: 'all' as const, name: 'All', icon: '✨', color: '#FFE2E7' };
+const ALL_CAT = { id: 'all' as const, name: 'All' };
 
 export default function HomeScreen({
   onLogoTap,
@@ -50,8 +50,8 @@ export default function HomeScreen({
         {/* Greeting + search */}
         <div className="px-5 pt-1 anim-up relative overflow-hidden">
           {/* Decorative background glow */}
-          <div className="pointer-events-none absolute -right-10 -top-8 h-40 w-40 rounded-full bg-coral/6 blur-3xl" />
-          <div className="pointer-events-none absolute -left-4 top-4 h-24 w-24 rounded-full bg-blush-200/60 blur-2xl" />
+          <div className="pointer-events-none absolute -right-10 -top-8 h-40 w-40 rounded-full bg-blush-200/60 blur-3xl" />
+          <div className="pointer-events-none absolute -left-4 top-4 h-24 w-24 rounded-full bg-blush-100/80 blur-2xl" />
           <div className="text-[12px] font-medium tracking-[0.2em] text-ink-200 uppercase">
             Welcome back
           </div>
@@ -70,7 +70,7 @@ export default function HomeScreen({
           <div className="mt-5 px-5 anim-up delay-1">
             <div
               className="relative overflow-hidden rounded-[28px] bg-white"
-              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 18px 50px -28px rgba(242,94,115,.35)' }}
+              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.03), 0 18px 50px -28px rgba(26,19,17,.18)' }}
             >
               <div className="relative aspect-[16/11] w-full overflow-hidden">
                 {banners.map((b, i) => (
@@ -109,7 +109,7 @@ export default function HomeScreen({
                             go({ name: 'product', productId: b.productId || products[0]?.id || 'p1' });
                           }
                         }}
-                        className="mt-3.5 inline-flex h-10 w-fit items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-coral transition active:scale-95 shadow"
+                        className="mt-3.5 inline-flex h-10 w-fit items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-bold text-ink transition active:scale-95 shadow"
                       >
                         {b.type === 'discount' ? (
                           copiedId === b.id ? 'Copied!' : `Copy: ${b.promoCode || 'CODE'}`
@@ -163,8 +163,8 @@ export default function HomeScreen({
               className="group flex w-full items-center gap-3 rounded-2xl border border-ink-50 bg-white p-3.5 text-left transition active:scale-[.98]"
               style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 8px 24px -18px rgba(26,19,17,.18)' }}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-coral-50">
-                <Sparkles className="h-5 w-5 text-coral" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink-50">
+                <RefreshCw className="h-5 w-5 text-ink" strokeWidth={1.75} />
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-bold text-ink">Order again</div>
@@ -188,12 +188,12 @@ export default function HomeScreen({
                 className="group flex w-[78px] flex-shrink-0 flex-col items-center gap-2 transition active:scale-95"
               >
                 <div
-                  className="relative flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-[22px] border border-white bg-gradient-to-br from-white via-coral-50 to-blush-100 text-coral shadow-[0_10px_24px_-16px_rgba(242,94,115,.55)] transition group-active:scale-95"
+                  className="relative flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-[22px] border border-white bg-gradient-to-br from-white to-blush-100 text-ink-200 shadow-[0_10px_24px_-16px_rgba(26,19,17,.18)] transition group-active:scale-95"
                   style={{
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9), 0 10px 24px -16px rgba(242,94,115,.55)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9), 0 10px 24px -16px rgba(26,19,17,.18)',
                   }}
                 >
-                  <span className="absolute -right-4 -top-4 h-10 w-10 rounded-full bg-coral/10" />
+                  <span className="absolute -right-4 -top-4 h-10 w-10 rounded-full bg-blush-200/50" />
                   <OccasionIcon id={c.id} size={28} className="relative" />
                 </div>
                 <span className="text-[12px] font-semibold text-ink">{c.name}</span>
@@ -228,12 +228,12 @@ export default function HomeScreen({
             className="relative overflow-hidden rounded-[28px] p-5"
             style={{ background: 'linear-gradient(135deg, #2A1F1E 0%, #3D2D2C 100%)' }}
           >
-            <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-coral/35 blur-2xl" />
+            <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-coral/30 blur-2xl" />
             <div className="absolute bottom-0 -left-12 h-32 w-32 rounded-full bg-gold/15 blur-2xl" />
 
             <div className="relative flex items-center gap-4">
               <div className="flex-1">
-                <div className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-coral-300 uppercase backdrop-blur">
+                <div className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blush-200 uppercase backdrop-blur">
                   <Sparkles className="h-2.5 w-2.5" /> For you
                 </div>
                 <h3 className="mt-2 font-display text-[20px] leading-tight font-bold tracking-tight text-white">
@@ -274,7 +274,9 @@ export default function HomeScreen({
             className="w-full max-w-sm overflow-hidden rounded-[28px] glass-strong p-6 shadow-2xl anim-scale"
             style={{ boxShadow: '0 20px 60px -10px rgba(0,0,0,0.15)' }}
           >
-            <div className="text-4xl">📢</div>
+            <div className="flex justify-center text-ink">
+              <Megaphone size={40} strokeWidth={1.5} />
+            </div>
             <h3 className="mt-4 font-display text-[20px] font-bold tracking-tight text-ink">
               {activeNotice.title}
             </h3>
