@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useUI, useUser, useOrders, useCart } from '../lib/store';
+import { useUI, useUser, useOrders } from '../lib/store';
 import { categories } from '../lib/data';
 import { useProducts } from '../hooks/useProducts';
 import { useBanners } from '../hooks/useBanners';
