@@ -5,7 +5,7 @@ import {
   Cake, Gift, Wallet as WalletIcon,
   Copy, Share2
 } from 'lucide-react';
-import { useUI, useUser, useOrders, useCart, useAuthStore, useWallet, getReferralCode, WALLET_MAX_REDEEM, claimReferralRewards, WALLET_REFERRAL_BONUS, useDebug } from '../lib/store';
+import { useUI, useUser, useOrders, useCart, useAuthStore, useWallet, getReferralCode, WALLET_MAX_REDEEM, claimReferralRewards, WALLET_REFERRAL_BONUS } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -617,23 +617,7 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-ink-50 bg-white py-3.5 text-[13px] font-bold text-ink transition active:scale-[.98]"
           >
             <LogOut className="h-4 w-4" />
-      {/* Admin Debug Toggle */}
-      {isAdmin && (
-        <div className="mb-4 rounded-2xl bg-ink p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold text-white">🐛 Debug Mode</p>
-              <p className="text-xs text-white/50">Show FPS/click metrics in corner</p>
-            </div>
-            <button
-              onClick={() => useDebug.getState().toggle()}
-              className={`h-8 px-4 rounded-full text-xs font-bold transition-colors ${useDebug().enabled ? 'bg-coral text-white' : 'bg-white/10 text-white/70'}`}
-            >
-              {useDebug().enabled ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-      )}
+
             Sign out
           </button>
         </div>

@@ -18,7 +18,6 @@ import NotificationsSheet from './components/NotificationsSheet';
 import WishlistScreen from './screens/WishlistScreen';
 import TrackingScreen from './screens/TrackingScreen';
 import AdminScreen from './screens/AdminScreen';
-import DebugMetrics from './components/DebugMetrics';
 import AppErrorBoundary from './components/AppErrorBoundary';
 
 export default function App() {
@@ -115,7 +114,6 @@ export default function App() {
 
         <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
         <AuthSheet open={authOpen} onClose={() => setAuthOpen(false)} />
-        <DebugMetrics />
       </div>
     </AppErrorBoundary>
   );
