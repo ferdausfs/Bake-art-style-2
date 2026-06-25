@@ -158,6 +158,8 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
   useModalDepth(showDatesModal);
   useModalDepth(inviteOpen);
   useModalDepth(walletHistoryOpen);
+  useModalDepth(contactOpen);
+  useModalDepth(customerOpen);
 
   const wishlistItems = (products ?? []).filter((p) => p && wishlist.includes(p.id));
 

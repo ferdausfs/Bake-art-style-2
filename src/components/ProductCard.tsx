@@ -20,8 +20,8 @@ export default function ProductCard({ product, wished, onOpen, onWish, variant =
       productId: product.id,
       name: product.name,
       image: product.image,
-      size: product.weights[0].size,
-      flavor: product.flavors[0],
+      size: product.weights?.[0]?.size ?? '1 kg',
+      flavor: product.flavors?.[0] ?? 'Chocolate',
       price: product.price,
       quantity: 1,
     });
@@ -86,13 +86,15 @@ export default function ProductCard({ product, wished, onOpen, onWish, variant =
             <span className="font-display text-[17px] font-bold tabular text-gradient-coral">
               {formatINR(product.price)}
             </span>
-            <button
-              onClick={handleAdd}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-coral text-white shadow-[0_8px_20px_-8px_rgba(242,94,115,.5)] transition active:scale-90 hover:brightness-105"
-              aria-label="Add to cart"
-            >
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-            </button>
+            {(product.inStock ?? true) && (
+              <button
+                onClick={handleAdd}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-coral text-white shadow-[0_8px_20px_-8px_rgba(242,94,115,.5)] transition active:scale-90 hover:brightness-105"
+                aria-label="Add to cart"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+              </button>
+            )}
           </div>
         </div>
       </article>
@@ -150,13 +152,15 @@ export default function ProductCard({ product, wished, onOpen, onWish, variant =
           <span className="font-display text-[15px] font-bold tabular text-gradient-coral">
             {formatINR(product.price)}
           </span>
-          <button
-            onClick={handleAdd}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-coral text-white shadow-[0_6px_16px_-8px_rgba(242,94,115,.5)] transition active:scale-90"
-            aria-label="Add to cart"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-          </button>
+          {(product.inStock ?? true) && (
+            <button
+              onClick={handleAdd}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-coral text-white shadow-[0_6px_16px_-8px_rgba(242,94,115,.5)] transition active:scale-90"
+              aria-label="Add to cart"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </button>
+          )}
         </div>
       </div>
     </article>

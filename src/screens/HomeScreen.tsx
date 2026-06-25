@@ -50,7 +50,7 @@ export default function HomeScreen({
   const [activeNotice, setActiveNotice] = useState<Banner | null>(null);
 
   const trending = useMemo(() => products
-    .filter((p) => p.bestseller || p.newArrival)
+    .filter((p) => (p.inStock ?? true) && (p.bestseller || p.newArrival))
     .slice(0, 8), [products]);
 
   useEffect(() => {

@@ -87,13 +87,15 @@ export default function ProductScreen() {
   }
 
   const currentImg = activeImg || product.image;
-  const [size, setSize] = useState(product.weights[1]?.size ?? product.weights[0]?.size);
+  const safeWeights = product.weights?.length ? product.weights : [{ size: '1 kg', price: product.price }];
+  const safeFlavors = product.flavors?.length ? product.flavors : ['Chocolate'];
+  const [size, setSize] = useState(safeWeights[1]?.size ?? safeWeights[0]?.size);
   const [addons, setAddons] = useState<Record<string, boolean>>({});
   const [customWeight, setCustomWeight] = useState('1');
   const [weightError, setWeightError] = useState('');
   const wished = wishlist.includes(product.id);
 
-  const selectedWeight = product.weights.find((w) => w.size === size);
+  const selectedWeight = safeWeights.find((w) => w.size === size);
   const addonsCost = ADDONS.reduce((s, a) => s + (addons[a.id] ? a.price : 0), 0);
   const selectedAddons = ADDONS.filter((a) => addons[a.id]).map((a) => a.name);
 
@@ -119,7 +121,7 @@ export default function ProductScreen() {
         name: product.name,
         image: product.image,
         size: `${customWeight} ${product.priceUnit ?? 'kg'}`,
-        flavor: product.flavors[0],
+        flavor: safeFlavors[0],
         topping: selectedAddons.length ? selectedAddons.join(', ') : undefined,
         price: total,
         quantity: 1,
@@ -130,7 +132,7 @@ export default function ProductScreen() {
         name: product.name,
         image: product.image,
         size,
-        flavor: product.flavors[0],
+        flavor: safeFlavors[0],
         topping: selectedAddons.length ? selectedAddons.join(', ') : undefined,
         price: total,
         quantity: 1,
@@ -285,7 +287,7 @@ export default function ProductScreen() {
             ) : (
               /* Existing static weight chips */
               <div className="mt-3 grid grid-cols-4 gap-2">
-                {product.weights.map((w) => {
+                {safeWeights.map((w) => {
                   const fullPrice = product.price + w.price;
                   const active = size === w.size;
                   return (

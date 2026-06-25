@@ -17,6 +17,7 @@ export default function CategoriesScreen() {
   const [search, setSearch] = useState('');
 
   const filtered = products
+    .filter((p) => (p.inStock ?? true))
     .filter((p) => (active === 'all' ? true : p.occasion === active))
     .filter((p) =>
       search.trim() ? p.name.toLowerCase().includes(search.toLowerCase()) : true
