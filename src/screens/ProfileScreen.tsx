@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
   ChevronRight, Star, Sparkles, LogIn, X, Save, Check, User, AlertTriangle,
-  Cake, Gift, Star as StarIcon
+  Cake, Gift, Star as StarIcon, Wallet as WalletIcon, Users as UsersIcon
 } from 'lucide-react';
-import { useUI, useUser, useOrders, useCart, useAuthStore, useLoyalty } from '../lib/store';
+import { useUI, useUser, useOrders, useCart, useAuthStore, useWallet, getReferralCode, WALLET_MAX_REDEEM } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useAuth } from '../hooks/useAuth';
 import { ls } from '../lib/utils';
 import BrandLogo from '../components/BrandLogo';
+import WalletHistoryModal from '../components/WalletHistoryModal';
 import { ChatBot } from '../components/ChatBot';
 import { AdminPanel } from '../components/AdminPanel';
 import type { SavedAddress, SpecialDate } from '../types';
@@ -124,7 +125,9 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false, onModalChan
   const { user } = useAuthStore();
   const { signOut } = useAuth();
   const { products } = useProducts();
-  const { points, history } = useLoyalty();
+  const { balance, totalEarned, txns } = useWallet();
+  const referralCode = getReferralCode(user);
+  const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
 
   const [contactOpen, setContactOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -329,66 +332,51 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false, onModalChan
           </div>
         </div>
 
-        {/* Loyalty Points Card */}
+        {/* Wallet Card */}
         {user && (
           <section className="px-4 pt-2 pb-1">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 px-5 py-4 text-white"
-              style={{ boxShadow: '0 8px 24px -8px rgba(217,161,91,.5)' }}>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-coral to-rose-500 px-5 py-4 text-white"
+              style={{ boxShadow: '0 8px 24px -8px rgba(242,94,115,.5)' }}>
               {/* Background decoration */}
               <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10" />
               <div className="pointer-events-none absolute -right-1 top-8 h-16 w-16 rounded-full bg-white/8" />
-              <div className="flex items-start justify-between">
+              {/* Top row */}
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">My Wallet</div>
+                <WalletIcon className="h-5 w-5 text-white/80" />
+              </div>
+              {/* Big balance */}
+              <div className="mt-2 font-display text-[40px] font-bold leading-none">
+                ৳{balance.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-white/60 mt-0.5">wallet balance</div>
+              {/* Divider */}
+              <div className="my-3 h-px bg-white/20" />
+              {/* Stats row */}
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">Loyalty Points</div>
-                  <div className="mt-1 font-display text-[36px] font-bold leading-none
-..." />
-                  <div className="mt-1 text-[11px] text-white/80">
-                    Earn 1 point per ৳10 spent · Redeem 1000 pts = ৳50 off
-                  </div>
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-white/80">
-                      <span>Next reward at 1000 pts</span>
-                      <span>{points % 1000}/1000</span>
-                    </div>
-                    <div className="mt-1 h-2 rounded-full bg-white/20">
-                      <div className="h-full rounded-full bg-white transition-all"
-                        style={{ width: `${Math.min(100, ((points % 1000) / 1000) * 100)}%` }} />
-                    </div>
-                  </div>
+                  <div className="font-display text-[16px] font-bold">৳{totalEarned.toLocaleString()}</div>
+                  <div className="text-[10px] text-white/50">total earned</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-[16px] font-bold">{referralCode ?? '—'}</div>
+                  <div className="text-[10px] text-white/50">referral code</div>
                 </div>
               </div>
+              {/* View history button */}
+              <button
+                onClick={() => setWalletHistoryOpen(true)}
+                className="mt-3 w-full rounded-2xl bg-white/10 py-2.5 text-[12px] text-white/90 font-medium transition active:scale-[.98]"
+              >
+                View full history ({txns.length} transactions)
+              </button>
+            </div>
+            <div className="text-[10.5px] text-ink-200 text-center mt-2">
+              Earn ৳20 per ৳1000 spent · Referral bonus ৳100 · Max redeem ৳{WALLET_MAX_REDEEM}/order
             </div>
           </section>
         )}
 
-        {/* Loyalty History */}
-        {user && history.length > 0 && (
-          <section className="px-4 pb-2">
-            <div className="rounded-2xl bg-white overflow-hidden"
-              style={{ boxShadow: '0 1px 2px rgba(26,19,17,.02), 0 4px 12px -8px rgba(26,19,17,.10)' }}>
-              <div className="px-4 py-3 border-b border-ink/5">
-                <span className="text-[12px] font-bold text-ink">Points History</span>
-              </div>
-              <div className="divide-y divide-ink/5">
-                {history.slice(0, 5).map((h) => (
-                  <div key={h.id} className="flex items-center justify-between px-4 py-2.5">
-                    <div>
-                      <div className="text-[12px] font-semibold text-ink">
-                        {h.type === 'earned' ? 'Points earned' : 'Points redeemed'}
-                      </div>
-                      <div className="text-[10px] text-ink/40">
-                        {new Date(h.date).toLocaleDateString('en-BD', { day: 'numeric', month: 'short' })}
-                      </div>
-                    </div>
-                    <span className={`text-[13px] font-bold ${h.type === 'earned' ? 'text-emerald-600' : 'text-coral'}`}>
-                      {h.type === 'earned' ? '+' : ''}{h.points.toLocaleString()} pts
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         <div className="mt-4 grid grid-cols-3 gap-2.5 px-5 anim-up delay-1">
           <Stat label="Orders" value={(orders ?? []).length} />
@@ -862,6 +850,8 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false, onModalChan
           </div>
         </div>
       )}
+
+      <WalletHistoryModal open={walletHistoryOpen} onClose={() => setWalletHistoryOpen(false)} />
     </div>
   );
 }

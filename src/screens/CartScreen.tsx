@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Sparkles, Truck, Shield, ShoppingCart, Star } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, Tag, ShoppingBag, Sparkles, Truck, Shield, ShoppingCart, Wallet } from 'lucide-react';
 import {
   useCart,
   useUI,
-  useLoyalty,
+  useWallet,
+  WALLET_MAX_REDEEM,
+  WALLET_MIN_ORDER_TO_REDEEM,
   formatINR,
   cartSubtotal,
   standardDeliveryFee,
   useSettingsStore,
-  loyaltyDiscountFromPoints,
-  LOYALTY_STEP_POINTS,
-  LOYALTY_STEP_TAKA,
 } from '../lib/store';
 
 export default function CartScreen() {
@@ -25,7 +24,7 @@ export default function CartScreen() {
     setPendingLoyaltyRedeem,
     clearLoyalty,
   } = useUI();
-  const { points } = useLoyalty();
+  const { balance } = useWallet();
   const [code, setCode] = useState('');
   const [promoError, setPromoError] = useState('');
 
@@ -37,26 +36,26 @@ export default function CartScreen() {
   const isFreeDelivery = subtotal >= currentFreeThreshold;
   const delivery = items.length === 0 ? 0 : (isFreeDelivery ? 0 : currentDeliveryFee);
 
-  // Loyalty discount: flat taka, not percentage
-  const loyaltyDiscount = loyaltyDiscountFromPoints(pendingLoyaltyRedeem);
+  // Wallet: balance is in ৳ taka directly
+  // Max redeem = min(balance, WALLET_MAX_REDEEM, subtotal cap)
+  const maxRedeemable = Math.min(balance, WALLET_MAX_REDEEM, subtotal);
+  const walletDiscount = pendingLoyaltyRedeem; // pendingLoyaltyRedeem now stores ৳ directly
+  const canRedeem = balance > 0 && subtotal >= WALLET_MIN_ORDER_TO_REDEEM && promoDiscount === 0;
+
   const promoDiscountAmount = promoDiscount > 0 ? (subtotal * promoDiscount) / 100 : 0;
-  const discountAmount = promoDiscountAmount + loyaltyDiscount;
+  const discountAmount = promoDiscountAmount + walletDiscount;
   const total = Math.max(0, subtotal + delivery - discountAmount);
 
   const remaining = currentFreeThreshold - subtotal;
   const progress = Math.min((subtotal / currentFreeThreshold) * 100, 100);
 
-  // Auto-clamp loyalty redemption if cart total drops
+  // Auto-clamp wallet redemption if cart total drops
   useEffect(() => {
     if (pendingLoyaltyRedeem === 0) return;
-    const maxBySubtotal = Math.floor(subtotal / LOYALTY_STEP_TAKA);
-    const maxByPoints = Math.floor(points / LOYALTY_STEP_POINTS);
-    const maxSets = Math.max(0, Math.min(maxByPoints, maxBySubtotal));
-    const maxPts = maxSets * LOYALTY_STEP_POINTS;
-    if (pendingLoyaltyRedeem > maxPts) {
-      setPendingLoyaltyRedeem(maxPts);
+    if (pendingLoyaltyRedeem > maxRedeemable) {
+      setPendingLoyaltyRedeem(maxRedeemable);
     }
-  }, [subtotal, points, pendingLoyaltyRedeem, setPendingLoyaltyRedeem]);
+  }, [subtotal, balance, pendingLoyaltyRedeem, maxRedeemable, setPendingLoyaltyRedeem]);
 
   const handleCheckout = () => {
     go({ name: 'checkout' });
@@ -94,12 +93,6 @@ export default function CartScreen() {
       </div>
     );
   }
-
-  const maxRedeemableSets = Math.min(
-    Math.floor(points / LOYALTY_STEP_POINTS),
-    Math.floor(subtotal / LOYALTY_STEP_TAKA)
-  );
-  const canRedeem = points >= LOYALTY_STEP_POINTS && maxRedeemableSets > 0 && promoDiscount === 0;
 
   return (
     <div className="flex h-full flex-col bg-cream">
@@ -191,18 +184,18 @@ export default function CartScreen() {
           ))}
         </div>
 
-        {/* Loyalty Points Redemption */}
-        {points >= LOYALTY_STEP_POINTS && (
-          <div className="mt-4 rounded-2xl overflow-hidden border border-amber-200 bg-amber-50">
+        {/* Wallet Redemption */}
+        {balance > 0 && (
+          <div className="mt-4 rounded-2xl overflow-hidden border border-coral/20 bg-coral-50">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-amber-500" strokeWidth={2} />
+                <Wallet className="h-[18px] w-[18px] text-coral" strokeWidth={2} />
                 <div>
-                  <div className="text-[12px] font-bold text-amber-800">
-                    You have {points.toLocaleString()} points
+                  <div className="text-[12px] font-bold text-coral-800">
+                    ৳{balance.toLocaleString()} wallet balance
                   </div>
-                  <div className="text-[10px] text-amber-600">
-                    Redeem {LOYALTY_STEP_POINTS} pts = ৳{LOYALTY_STEP_TAKA} off
+                  <div className="text-[10px] text-coral-600">
+                    Max ৳{WALLET_MAX_REDEEM} off per order
                   </div>
                 </div>
               </div>
@@ -210,24 +203,22 @@ export default function CartScreen() {
                 <button
                   onClick={() => {
                     if (promoDiscount > 0) {
-                      setPromoError('Promo code is active — remove it first to use points');
+                      setPromoError('Promo code is active — remove it first to use wallet');
                       return;
                     }
-                    const setsToRedeem = maxRedeemableSets;
-                    if (setsToRedeem <= 0) return;
-                    const ptsToRedeem = setsToRedeem * LOYALTY_STEP_POINTS;
-                    setPendingLoyaltyRedeem(ptsToRedeem);
+                    if (maxRedeemable <= 0) return;
+                    setPendingLoyaltyRedeem(maxRedeemable);
                     setPromoError('');
                   }}
                   disabled={!canRedeem}
-                  className="rounded-xl bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="rounded-xl bg-coral px-3 py-1.5 text-[11px] font-bold text-white active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Redeem
+                  Use ৳{maxRedeemable}
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-emerald-700">
-                    -৳{loyaltyDiscount} applied!
+                    −৳{walletDiscount} applied
                   </span>
                   <button
                     onClick={() => {
@@ -240,9 +231,14 @@ export default function CartScreen() {
                 </div>
               )}
             </div>
+            {!canRedeem && balance > 0 && subtotal < WALLET_MIN_ORDER_TO_REDEEM && (
+              <div className="px-4 pb-2 text-[10px] text-ink/40">
+                Add ৳{WALLET_MIN_ORDER_TO_REDEEM - subtotal} more to use wallet
+              </div>
+            )}
             {promoDiscount > 0 && pendingLoyaltyRedeem === 0 && (
-              <div className="px-4 pb-2.5 text-[10px] text-amber-700">
-                Remove the promo code to use loyalty points.
+              <div className="px-4 pb-2.5 text-[10px] text-coral-700">
+                Remove the promo code to use wallet balance.
               </div>
             )}
           </div>
@@ -265,7 +261,7 @@ export default function CartScreen() {
             <button
               onClick={() => {
                 if (pendingLoyaltyRedeem > 0) {
-                  setPromoError('Loyalty points are active — remove them first');
+                  setPromoError('Wallet balance is active — remove it first');
                   return;
                 }
                 if (!settings.promoEnabled) {
@@ -297,7 +293,7 @@ export default function CartScreen() {
           )}
           {pendingLoyaltyRedeem > 0 && (
             <p className="mt-1.5 px-3.5 text-emerald-600 text-[11px] font-semibold">
-              {pendingLoyaltyRedeem.toLocaleString()} points redeemed — ৳{loyaltyDiscount} off
+              ৳{walletDiscount} wallet balance redeemed
             </p>
           )}
         </div>
@@ -326,12 +322,8 @@ export default function CartScreen() {
                 positive
               />
             )}
-            {loyaltyDiscount > 0 && (
-              <Row
-                label={`Points (${pendingLoyaltyRedeem.toLocaleString()} pts)`}
-                value={'-' + formatINR(loyaltyDiscount)}
-                positive
-              />
+            {walletDiscount > 0 && (
+              <Row label="Wallet discount" value={'-৳' + walletDiscount} positive />
             )}
             <div className="h-px bg-ink-50" />
             <div className="flex items-center justify-between pt-1">

@@ -1,9 +1,9 @@
-import { Check, Home, Receipt, Star, Cake, Sparkles, Heart, Truck, PartyPopper } from 'lucide-react';
-import { useUI, useLoyalty } from '../lib/store';
+import { Check, Home, Receipt, Wallet, Cake, Sparkles, Heart, Truck, PartyPopper } from 'lucide-react';
+import { useUI, useWallet } from '../lib/store';
 
 export default function SuccessScreen() {
   const { view, setTab, go } = useUI();
-  const { points } = useLoyalty();
+  const { balance } = useWallet();
   const orderId = view.name === 'success' ? view.orderId : '';
 
   const timelineIcons: { Icon: typeof Cake; }[] = [
@@ -51,12 +51,12 @@ export default function SuccessScreen() {
           <div className="font-display text-[18px] font-bold tabular text-coral">#{orderId}</div>
         </div>
 
-        {/* Points earned */}
-        <div className="mt-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2.5 anim-rise delay-4 flex items-center gap-2">
-          <Star className="h-5 w-5 text-amber-500" strokeWidth={2} />
+        {/* Wallet earn info */}
+        <div className="mt-3 rounded-2xl bg-coral-50 border border-coral/20 px-4 py-2.5 anim-rise delay-4 flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-coral" strokeWidth={2} />
           <div>
-            <div className="text-[12px] font-bold text-amber-700">Points earned!</div>
-            <div className="text-[11px] text-amber-600">You now have {points.toLocaleString()} loyalty points</div>
+            <div className="text-[12px] font-bold text-coral-800">Wallet reward pending!</div>
+            <div className="text-[11px] text-coral-600">Wallet balance: ৳{balance.toLocaleString()}</div>
           </div>
         </div>
 

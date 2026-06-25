@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield, Navigation, Loader2, Phone, Banknote, ShoppingCart, Gift } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Wallet, Check, Shield, Navigation, Loader2, Phone, Banknote, ShoppingCart, Gift, Users } from 'lucide-react';
 import {
   useCart, useOrders, useUI, formatINR,
   cartSubtotal, standardDeliveryFee,
   useLocation,
   useSettingsStore,
   useAuthStore,
-  loyaltyDiscountFromPoints,
+  useWallet,
+  getReferralCode,
+  WALLET_REFERRAL_BONUS,
 } from '../lib/store';
 import { LocationGate } from '../components/LocationGate';
 
@@ -38,6 +40,26 @@ export default function CheckoutScreen({ onBack }: Props) {
   const { back, go, promoDiscount, pendingLoyaltyRedeem, clearAllCheckoutDiscounts } = useUI();
   const { verified: locationVerified, district: detectedDistrict } = useLocation();
   const user = useAuthStore((s) => s.user);
+
+  // Referral
+  const { earnReferral } = useWallet();
+  const [referralInput, setReferralInput] = useState('');
+  const [referralApplied, setReferralApplied] = useState(false);
+  const [referralError, setReferralError] = useState('');
+  const userReferralCode = getReferralCode(user);
+
+  const applyReferralCode = () => {
+    const code = referralInput.trim().toUpperCase();
+    if (!code) return;
+    if (code === userReferralCode) {
+      setReferralError("You can't use your own referral code");
+      return;
+    }
+    // Apply optimistically — give buyer ৳100, store the code for admin to verify
+    setReferralApplied(true);
+    setReferralError('');
+    earnReferral(code, 'buyer');
+  };
 
   const [showLocationGate, setShowLocationGate] = useState(!locationVerified);
   const [locating, setLocating] = useState(false);
@@ -96,15 +118,15 @@ export default function CheckoutScreen({ onBack }: Props) {
   const currentFreeThreshold = settings.freeDeliveryThreshold !== undefined ? settings.freeDeliveryThreshold : 999;
 
 
-  const { subtotal, delivery, promoDiscountAmount, loyaltyDiscount, discountAmount, total } = useMemo(() => {
+  const { subtotal, delivery, promoDiscountAmount, walletDiscount, discountAmount, total } = useMemo(() => {
     const sub = cartSubtotal(items);
     const freeDlv = sub >= currentFreeThreshold;
     const dlv = items.length === 0 ? 0 : (freeDlv ? 0 : currentDeliveryFee);
     const promoDisc = promoDiscount > 0 ? (sub * promoDiscount) / 100 : 0;
-    const loyaltyDisc = loyaltyDiscountFromPoints(pendingLoyaltyRedeem);
-    const disc = promoDisc + loyaltyDisc;
+    const walletDisc = pendingLoyaltyRedeem; // pendingLoyaltyRedeem now stores ৳ directly
+    const disc = promoDisc + walletDisc;
     const giftWrapFee = giftMode && gift.wrap ? 50 : 0;
-    return { subtotal: sub, delivery: dlv, promoDiscountAmount: promoDisc, loyaltyDiscount: loyaltyDisc, discountAmount: disc, total: Math.max(0, sub + dlv - disc + giftWrapFee) };
+    return { subtotal: sub, delivery: dlv, promoDiscountAmount: promoDisc, walletDiscount: walletDisc, discountAmount: disc, total: Math.max(0, sub + dlv - disc + giftWrapFee) };
   }, [items, currentDeliveryFee, currentFreeThreshold, promoDiscount, pendingLoyaltyRedeem, giftMode, gift.wrap]);
 
   const handleLocate = async () => {
@@ -398,6 +420,43 @@ export default function CheckoutScreen({ onBack }: Props) {
               </button>
             ))}
           </div>
+
+          {/* Referral Code */}
+          <div className="mt-4 pt-4 border-t border-ink/5">
+            <div className="flex items-center gap-2 mb-2.5">
+              <Users className="h-4 w-4 text-ink-200" />
+              <span className="text-[12px] font-bold text-ink">রেফারেল কোড</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                value={referralInput}
+                onChange={(e) => { setReferralInput(e.target.value); setReferralError(''); }}
+                placeholder="কারো রেফারেল কোড আছে?"
+                disabled={referralApplied}
+                className="flex-1 h-10 rounded-xl border border-ink-50 bg-white px-3 text-[13px] font-medium text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15 disabled:opacity-50"
+              />
+              <button
+                onClick={applyReferralCode}
+                disabled={referralApplied || !referralInput}
+                className="rounded-xl bg-coral px-3.5 py-2 text-[11px] font-bold text-white active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Apply
+              </button>
+            </div>
+            {referralApplied && (
+              <div className="mt-2 text-[11px] text-emerald-600 font-semibold">
+                Referral code applied! ৳{WALLET_REFERRAL_BONUS} added to your wallet
+              </div>
+            )}
+            {referralError && (
+              <div className="mt-2 text-[11px] text-red-500 font-semibold">{referralError}</div>
+            )}
+            {userReferralCode && (
+              <div className="mt-2 text-[10px] text-ink/40">
+                Your code: <span className="font-mono font-bold">{userReferralCode}</span> — share it to earn ৳{WALLET_REFERRAL_BONUS} per referral
+              </div>
+            )}
+          </div>
         </Section>
 
         {/* Bill */}
@@ -416,10 +475,10 @@ export default function CheckoutScreen({ onBack }: Props) {
                 positive
               />
             )}
-            {loyaltyDiscount > 0 && (
+            {walletDiscount > 0 && (
               <Row
-                label={`পয়েন্ট (${pendingLoyaltyRedeem.toLocaleString()} pts)`}
-                value={'-' + formatINR(loyaltyDiscount)}
+                label="Wallet discount"
+                value={'-৳' + walletDiscount}
                 positive
               />
             )}

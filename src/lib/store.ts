@@ -255,11 +255,11 @@ export const useOrders = create<OrderState>()(
 
         set((s) => ({ orders: [o, ...s.orders] }));
         useUI.getState().addNotification('✅ Order placed', `Order #${o.id} has been placed successfully.`);
-        useLoyalty.getState().addPendingPoints(o.id, o.total);
+        useWallet.getState().earnFromOrder(o.id, o.total);
 
-        // If user redeemed loyalty points in cart, deduct them now (track per order)
+        // If user redeemed wallet balance in cart, deduct them now (track per order)
         if (pendingRedeem > 0) {
-          useLoyalty.getState().redeemPoints(pendingRedeem, o.id);
+          useWallet.getState().redeemBalance(pendingRedeem, o.id);
         }
         // clear both promo + loyalty after order
         useUI.getState().clearAllCheckoutDiscounts();
@@ -298,13 +298,16 @@ export const useOrders = create<OrderState>()(
         useUI.getState().addNotification('📦 Order updated', `Order #${id} status changed to ${status}.`);
 
         if (status === 'confirmed') {
-          useLoyalty.getState().confirmPoints(id);
+          useWallet.getState().confirmOrderEarn(id);
         }
         if (status === 'cancelled') {
-          useLoyalty.getState().cancelPoints(id);
-          const refunded = useLoyalty.getState().refundRedeemedPoints(id);
-          if (refunded > 0) {
-            useUI.getState().addNotification('↩️ Points refunded', `${refunded} loyalty points refunded for cancelled order #${id}.`);
+          useWallet.getState().cancelOrderEarn(id);
+          // find how much was redeemed from order record
+          const order = useOrders.getState().orders.find(o => o.id === id);
+          const redeemed = order?.loyaltyPointsRedeemed ?? 0;
+          if (redeemed > 0) {
+            useWallet.getState().refundRedeem(id, redeemed);
+            useUI.getState().addNotification('Wallet refund', `৳${redeemed} refunded to your wallet for cancelled order #${id}.`);
           }
         }
 
@@ -356,10 +359,7 @@ export const freeDeliveryThreshold = 999;
 export const standardDeliveryFee = 60;
 export const qualifiesForFreeDelivery = (sub: number) => sub >= freeDeliveryThreshold;
 
-// Loyalty helpers
-export const LOYALTY_STEP_POINTS = 1000;
-export const LOYALTY_STEP_TAKA = 50;
-export const loyaltyDiscountFromPoints = (pts: number) => Math.floor(pts / LOYALTY_STEP_POINTS) * LOYALTY_STEP_TAKA;
+
 // ── Auth Store ─────────────────────────────────────────────
 import type { User, SiteSettings } from '../types';
 import { DEFAULT_SETTINGS } from './data';
@@ -481,107 +481,157 @@ export const useLocation = create<LocationState>()(
 //   newOrderCount, incrementNewOrders, clearNewOrders
 //   chatOpen, setChatOpen
 
-// ─── Loyalty Points ───────────────────────────────────────────────────────────
-export const LOYALTY_POINTS_PER_TAKA = 50; // 1000 pts = ৳50
+// ─── Wallet (Loyalty + Referral) ─────────────────────────────────────────────
 
-type LoyaltyHistory = {
+// Business rules — single source of truth
+export const WALLET_EARN_PER_TAKA = 20 / 1000;   // ৳20 per ৳1000 spent
+export const WALLET_REFERRAL_BONUS = 100;          // ৳100 for both referrer and new buyer
+export const WALLET_MAX_REDEEM = 200;              // ৳200 max discount per order
+export const WALLET_MIN_ORDER_TO_REDEEM = 500;     // minimum order subtotal to use wallet
+
+// Derive referral code from user profile
+export const getReferralCode = (user: { email?: string; id?: string } | null): string | null => {
+  if (!user?.email || !user?.id) return null;
+  const emailPart = user.email.replace('@', '').replace('.', '').slice(0, 4).toUpperCase();
+  const idPart = user.id.replace(/-/g, '').slice(-4).toUpperCase();
+  return emailPart + idPart;
+};
+
+// How much wallet balance an order earns (pending until confirmed)
+export const calcOrderWalletEarn = (orderTotal: number): number =>
+  Math.floor((orderTotal / 1000) * 20);
+
+export type WalletTxType = 'order_earn' | 'referral_earn' | 'redeem' | 'refund' | 'referral_bonus';
+
+export type WalletTx = {
   id: string;
-  orderId: string;
-  amount: number;
-  points: number;
+  type: WalletTxType;
+  amount: number;          // positive = credit, negative = debit (in ৳)
+  orderId?: string;
+  refCode?: string;        // referral code used (for referral txns)
   date: number;
-  type: 'earned' | 'redeemed' | 'refunded';
+  note: string;            // human-readable label shown in history
+  pending?: boolean;       // true = waiting for order confirmation
 };
 
-type LoyaltyState = {
-  points: number;
-  totalEarned: number;
-  history: LoyaltyHistory[];
-  pendingPoints: { orderId: string; points: number }[];
-  redeemedPoints: Record<string, number>; // orderId -> points redeemed on that order
-  addPoints: (orderId: string, orderTotal: number) => void;
-  addPendingPoints: (orderId: string, orderTotal: number) => void;
-  confirmPoints: (orderId: string) => void;
-  cancelPoints: (orderId: string) => void;
-  redeemPoints: (points: number, orderId?: string) => void;
-  refundRedeemedPoints: (orderId: string) => number;
+type WalletState = {
+  balance: number;                                    // ৳ balance (confirmed only)
+  totalEarned: number;                                // lifetime ৳ earned
+  txns: WalletTx[];                                   // full transaction history
+  pendingEarn: { orderId: string; amount: number }[]; // unconfirmed order earnings
+
+  // Actions
+  earnFromOrder: (orderId: string, orderTotal: number) => void;      // add pending earn
+  confirmOrderEarn: (orderId: string) => void;                       // pending → balance
+  cancelOrderEarn: (orderId: string) => void;                        // discard pending
+  refundRedeem: (orderId: string, amount: number) => void;           // refund a redemption
+  earnReferral: (refCode: string, role: 'referrer' | 'buyer') => void; // ৳100 bonus
+  redeemBalance: (amount: number, orderId: string) => void;          // spend balance
 };
 
-export const useLoyalty = create<LoyaltyState>()(
+export const useWallet = create<WalletState>()(
   persist(
     (set, get) => ({
-      points: 0,
+      balance: 0,
       totalEarned: 0,
-      history: [],
-      pendingPoints: [],
-      redeemedPoints: {},
-      addPoints: (orderId, orderTotal) => {
-        const earned = Math.floor(orderTotal);
-        set((s) => ({
-          points: s.points + earned,
-          totalEarned: s.totalEarned + earned,
-          history: [
-            { id: `lh-${Date.now()}`, orderId, amount: orderTotal, points: earned, date: Date.now(), type: 'earned' },
-            ...s.history,
-          ],
+      txns: [],
+      pendingEarn: [],
+
+      earnFromOrder: (orderId, orderTotal) => {
+        const amount = calcOrderWalletEarn(orderTotal);
+        if (amount <= 0) return;
+        // prevent duplicate pending
+        if (get().pendingEarn.find(p => p.orderId === orderId)) return;
+        set(s => ({
+          pendingEarn: [...s.pendingEarn, { orderId, amount }],
+          txns: [{
+            id: `wtx-${Date.now()}`,
+            type: 'order_earn',
+            amount,
+            orderId,
+            date: Date.now(),
+            note: `Order #${orderId} reward (pending)`,
+            pending: true,
+          }, ...s.txns],
         }));
       },
-      addPendingPoints: (orderId, orderTotal) => {
-        const pts = Math.floor(orderTotal);
-        set((s) => ({
-          pendingPoints: [...s.pendingPoints.filter((p) => p.orderId !== orderId), { orderId, points: pts }],
+
+      confirmOrderEarn: (orderId) => {
+        const s = get();
+        // prevent double-credit
+        if (s.txns.find(t => t.orderId === orderId && t.type === 'order_earn' && !t.pending)) return;
+        const pending = s.pendingEarn.find(p => p.orderId === orderId);
+        const amount = pending?.amount ?? 0;
+        if (amount <= 0) return;
+        set(cur => ({
+          balance: cur.balance + amount,
+          totalEarned: cur.totalEarned + amount,
+          pendingEarn: cur.pendingEarn.filter(p => p.orderId !== orderId),
+          txns: cur.txns.map(t =>
+            t.orderId === orderId && t.type === 'order_earn' && t.pending
+              ? { ...t, pending: false, note: `Order #${orderId} reward` }
+              : t
+          ),
         }));
       },
-      confirmPoints: (orderId) => {
-        const pending = get().pendingPoints.find((p) => p.orderId === orderId);
-        if (!pending) return;
-        set((s) => ({
-          points: s.points + pending.points,
-          totalEarned: s.totalEarned + pending.points,
-          history: [
-            { id: `lh-${Date.now()}`, orderId, amount: 0, points: pending.points, date: Date.now(), type: 'earned' },
-            ...s.history,
-          ],
-          pendingPoints: s.pendingPoints.filter((p) => p.orderId !== orderId),
+
+      cancelOrderEarn: (orderId) => {
+        set(s => ({
+          pendingEarn: s.pendingEarn.filter(p => p.orderId !== orderId),
+          txns: s.txns.filter(t => !(t.orderId === orderId && t.type === 'order_earn' && t.pending)),
         }));
       },
-      cancelPoints: (orderId) => {
-        set((s) => ({
-          pendingPoints: s.pendingPoints.filter((p) => p.orderId !== orderId),
+
+      refundRedeem: (orderId, amount) => {
+        if (amount <= 0) return;
+        set(s => ({
+          balance: s.balance + amount,
+          txns: [{
+            id: `wtx-${Date.now()}`,
+            type: 'refund',
+            amount,
+            orderId,
+            date: Date.now(),
+            note: `Refund for cancelled order #${orderId}`,
+          }, ...s.txns],
         }));
       },
-      redeemPoints: (pts, orderId) => {
-        set((s) => {
-          const nextRedeemed = { ...s.redeemedPoints };
-          if (orderId) nextRedeemed[orderId] = (nextRedeemed[orderId] || 0) + pts;
-          return {
-            points: Math.max(0, s.points - pts),
-            history: [
-              { id: `lh-${Date.now()}`, orderId: orderId || 'redemption', amount: 0, points: -pts, date: Date.now(), type: 'redeemed' },
-              ...s.history,
-            ],
-            redeemedPoints: nextRedeemed,
-          };
-        });
+
+      earnReferral: (refCode, role) => {
+        const amount = WALLET_REFERRAL_BONUS;
+        const note = role === 'referrer'
+          ? `Referral bonus — someone used your code`
+          : `Welcome bonus — referral code used`;
+        set(s => ({
+          balance: s.balance + amount,
+          totalEarned: s.totalEarned + amount,
+          txns: [{
+            id: `wtx-${Date.now()}`,
+            type: role === 'referrer' ? 'referral_earn' : 'referral_bonus',
+            amount,
+            refCode,
+            date: Date.now(),
+            note,
+          }, ...s.txns],
+        }));
       },
-      refundRedeemedPoints: (orderId) => {
-        const redeemed = get().redeemedPoints[orderId] || 0;
-        if (redeemed <= 0) return 0;
-        set((s) => {
-          const nextRedeemed = { ...s.redeemedPoints };
-          delete nextRedeemed[orderId];
-          return {
-            points: s.points + redeemed,
-            history: [
-              { id: `lh-${Date.now()}`, orderId, amount: 0, points: redeemed, date: Date.now(), type: 'refunded' },
-              ...s.history,
-            ],
-            redeemedPoints: nextRedeemed,
-          };
-        });
-        return redeemed;
+
+      redeemBalance: (amount, orderId) => {
+        const capped = Math.min(amount, WALLET_MAX_REDEEM);
+        if (capped <= 0) return;
+        set(s => ({
+          balance: Math.max(0, s.balance - capped),
+          txns: [{
+            id: `wtx-${Date.now()}`,
+            type: 'redeem',
+            amount: -capped,
+            orderId,
+            date: Date.now(),
+            note: `Redeemed for order #${orderId}`,
+          }, ...s.txns],
+        }));
       },
     }),
-    { name: 'bakeart-loyalty' }
+    { name: 'bakeart-wallet' }
   )
 );
