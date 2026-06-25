@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
   ChevronRight, Star, Sparkles, LogIn, X, Save, Check, User, AlertTriangle,
-  Cake, Gift, Star as StarIcon, Wallet as WalletIcon, Users as UsersIcon,
+  Cake, Gift, Wallet as WalletIcon,
   Copy, Share2
 } from 'lucide-react';
-import { useUI, useUser, useOrders, useCart, useAuthStore, useWallet, getReferralCode, WALLET_MAX_REDEEM } from '../lib/store';
+import { useUI, useUser, useOrders, useCart, useAuthStore, useWallet, getReferralCode, WALLET_MAX_REDEEM, claimReferralRewards, WALLET_REFERRAL_BONUS } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
 import { useAuth } from '../hooks/useAuth';
 import { ls } from '../lib/utils';
@@ -182,6 +182,24 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false }: Props) {
     setChatOpen(contactOpen || customerOpen);
     return () => setChatOpen(false);
   }, [contactOpen, customerOpen, setChatOpen]);
+
+  // Claim any pending cross-device referral rewards tied to this user's code.
+  // When someone on another device places an order using this code, the reward
+  // is picked up here and credited to the wallet (+৳100 each).
+  useEffect(() => {
+    if (!referralCode) return;
+    let active = true;
+    void (async () => {
+      const count = await claimReferralRewards(referralCode);
+      if (active && count > 0) {
+        useUI.getState().addNotification(
+          '🎉 Referral reward!',
+          `৳${count * WALLET_REFERRAL_BONUS} added for ${count} referral${count > 1 ? 's' : ''}!`
+        );
+      }
+    })();
+    return () => { active = false; };
+  }, [referralCode]);
 
   useEffect(() => {
     if (user?.id) saveAddresses(user.id, addresses);

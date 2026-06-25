@@ -151,9 +151,9 @@ export const useUI = create<UIState>((set, get) => ({
     });
     requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   },
-  applyPromo: (pct) => set((s) => ({ promoDiscount: pct, pendingLoyaltyRedeem: 0 })),
+  applyPromo: (pct) => set({ promoDiscount: pct, pendingLoyaltyRedeem: 0 }),
   clearPromo: () => set({ promoDiscount: 0 }),
-  setPendingLoyaltyRedeem: (pts) => set((s) => ({ pendingLoyaltyRedeem: Math.max(0, pts), promoDiscount: 0 })),
+  setPendingLoyaltyRedeem: (pts) => set({ pendingLoyaltyRedeem: Math.max(0, pts), promoDiscount: 0 }),
   clearLoyalty: () => set({ pendingLoyaltyRedeem: 0 }),
   clearAllCheckoutDiscounts: () => set({ promoDiscount: 0, pendingLoyaltyRedeem: 0 }),
   addNotification: (title, body) => set((s) => ({
@@ -642,3 +642,58 @@ export const useWallet = create<WalletState>()(
     { name: 'bakeart-wallet' }
   )
 );
+
+// ─── Cross-device Referral Rewards ───────────────────────────────────────────
+// The referral code/share UI already exists (getReferralCode + useWallet.earnReferral).
+// The missing piece: crediting the REFERRER on a *different* device when their code
+// is used. We do this via the existing `app_settings` table (key/value jsonb), so it
+// works genuinely cross-device:
+//   • Buyer (CheckoutScreen)  -> pushReferralReward(code, entry)
+//   • Referrer (ProfileScreen) -> claimReferralRewards(myCode) on app open
+// The `consumed` list (also in app_settings) is the persistent double-credit guard.
+
+export type ReferralPending = {
+  refereeId: string;
+  refereeName: string;
+  usedAt: number;
+};
+
+const referralPendingKey = (code: string) => `referral_pending_${code.trim().toUpperCase()}`;
+const referralConsumedKey = (code: string) => `referral_consumed_${code.trim().toUpperCase()}`;
+
+/** Called from checkout when an order using a referral code is placed. */
+export const pushReferralReward = async (refCode: string, entry: ReferralPending): Promise<void> => {
+  const code = refCode.trim().toUpperCase();
+  if (!code || !isSupabaseConfigured()) return;
+  try {
+    const existing = (await readRemoteSetting<ReferralPending[]>(referralPendingKey(code))) ?? [];
+    if (existing.some((e) => e.refereeId === entry.refereeId)) return; // dedupe
+    await writeRemoteSetting(referralPendingKey(code), [...existing, entry]);
+  } catch (e) {
+    console.warn('pushReferralReward failed:', e);
+  }
+};
+
+/** Called from ProfileScreen on mount — credits the referrer's wallet for any
+ *  unclaimed rewards tied to their code. Returns the number of rewards claimed. */
+export const claimReferralRewards = async (myCode: string): Promise<number> => {
+  const code = (myCode ?? '').trim().toUpperCase();
+  if (!code || !isSupabaseConfigured()) return 0;
+  try {
+    const pending = (await readRemoteSetting<ReferralPending[]>(referralPendingKey(code))) ?? [];
+    const consumed = (await readRemoteSetting<string[]>(referralConsumedKey(code))) ?? [];
+    const toClaim = pending.filter((e) => !consumed.includes(e.refereeId));
+    if (toClaim.length === 0) return 0;
+
+    // Credit the referrer once per pending referral
+    toClaim.forEach(() => useWallet.getState().earnReferral(code, 'referrer'));
+
+    // Mark consumed (cross-device persistent guard) and clear the pending queue
+    await writeRemoteSetting(referralConsumedKey(code), [...consumed, ...toClaim.map((e) => e.refereeId)]);
+    await writeRemoteSetting(referralPendingKey(code), []);
+    return toClaim.length;
+  } catch (e) {
+    console.warn('claimReferralRewards failed:', e);
+    return 0;
+  }
+};

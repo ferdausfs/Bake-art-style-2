@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Package, Search, ShoppingCart, CheckCircle2, Flame, Cake, Truck, PartyPopper } from 'lucide-react';
+import { ArrowLeft, Package, Search, ShoppingCart, CheckCircle2, Flame, Cake, Truck, PartyPopper, RefreshCw } from 'lucide-react';
 import { useUI, formatINR, useAuthStore } from '../lib/store';
 import { useOrdersHook } from '../hooks/useOrders';
 import { isSupabaseConfigured } from '../lib/utils';
@@ -40,6 +40,19 @@ export default function TrackingScreen() {
     const found = orders.find((o) => o && o.id.toLowerCase() === q);
     setMatch(found ?? null);
   }, [query, orders]);
+
+  // Poll every 15s while the tracked order is active, so admin status changes
+  // reach the customer in near-realtime (no websocket needed on customer side).
+  useEffect(() => {
+    if (!match || match.status === 'delivered' || match.status === 'cancelled') return;
+    if (!isSupabaseConfigured()) return;
+
+    const interval = setInterval(() => {
+      fetchMyOrders();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [match?.id, match?.status, fetchMyOrders]);
 
   return (
     <div className="flex h-full flex-col bg-cream">
@@ -89,8 +102,16 @@ export default function TrackingScreen() {
                   {new Date(match.createdAt).toLocaleString('en-BD')}
                 </div>
               </div>
-              <div className="font-display text-[18px] font-bold tabular text-ink">
-                {formatINR(match.total)}
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  onClick={() => fetchMyOrders()}
+                  className="flex items-center gap-1 rounded-xl bg-ink/5 px-2.5 py-1 text-[11px] font-semibold text-ink/60 active:scale-95"
+                >
+                  <RefreshCw className="h-3 w-3" /> Refresh
+                </button>
+                <div className="font-display text-[18px] font-bold tabular text-ink">
+                  {formatINR(match.total)}
+                </div>
               </div>
             </div>
 

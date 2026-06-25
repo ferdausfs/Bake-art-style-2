@@ -9,6 +9,7 @@ import {
   useWallet,
   getReferralCode,
   WALLET_REFERRAL_BONUS,
+  pushReferralReward,
 } from '../lib/store';
 import { LocationGate } from '../components/LocationGate';
 
@@ -37,7 +38,7 @@ interface Props {
 export default function CheckoutScreen({ onBack }: Props) {
   const { items, clear } = useCart();
   const { placeOrder, orders } = useOrders();
-  const { back, go, promoDiscount, pendingLoyaltyRedeem, clearAllCheckoutDiscounts } = useUI();
+  const { back, go, promoDiscount, pendingLoyaltyRedeem } = useUI();
   const { verified: locationVerified, district: detectedDistrict } = useLocation();
   const user = useAuthStore((s) => s.user);
 
@@ -189,6 +190,14 @@ export default function CheckoutScreen({ onBack }: Props) {
       loyaltyPointsRedeemed: pendingLoyaltyRedeem > 0 ? pendingLoyaltyRedeem : undefined,
       gift: giftMode ? gift : undefined,
     });
+    // Credit the referrer (cross-device) when their code was used on this order
+    if (referralApplied && referralInput.trim()) {
+      void pushReferralReward(referralInput.trim(), {
+        refereeId: user?.id || `guest-${o.id}`,
+        refereeName: form.name || 'Customer',
+        usedAt: Date.now(),
+      });
+    }
     clear();
     go({ name: 'success', orderId: o.id });
   };

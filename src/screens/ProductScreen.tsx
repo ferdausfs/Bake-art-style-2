@@ -49,7 +49,7 @@ export default function ProductScreen() {
         rating: reviewRating,
         comment: reviewComment.trim(),
         image: imageUrl || undefined,
-        approved: false,
+        approved: true,
         created_at: new Date().toISOString(),
       };
       await saveReview(review);
@@ -370,7 +370,7 @@ export default function ProductScreen() {
         {reviewSuccess && (
           <div className="mb-3 flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-[12px] text-emerald-700 font-semibold">
             <CheckCircle2 className="h-4 w-4" />
-            Review submitted! It'll appear after admin approval.
+            Review submitted! Thank you for your feedback.
           </div>
         )}
 

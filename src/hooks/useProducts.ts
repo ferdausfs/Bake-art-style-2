@@ -10,34 +10,80 @@ export function useProducts() {
   const [products, setProducts] = useState<Product[]>(() => safeArray<Product>(ls.get(LS_KEY, DEFAULT_PRODUCTS), DEFAULT_PRODUCTS));
   const [loading, setLoading] = useState(false);
 
+  // 2A — use the `data` jsonb column as the single source of truth.
   const fetchFromSupabase = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, data') // only need id and the data jsonb column
+        .order('created_at', { ascending: false });
       if (error) throw error;
       if (data && data.length > 0) {
-        const validated = safeArray<Product>(data);
-        setProducts(validated);
-        ls.set(LS_KEY, validated);
+        // Use the full product from data jsonb, fall back to a minimal object if data is null
+        const products = safeArray<Product>(
+          data.map((row: { id: string; data: unknown }) =>
+            row.data ? (row.data as Product) : ({ id: row.id } as Product)
+          )
+        );
+        if (products.length > 0) {
+          setProducts(products);
+          ls.set(LS_KEY, products);
+        }
       }
-    } catch (e) { console.warn('Products fetch failed, using local data:', e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      console.warn('Products fetch failed, using local:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchFromSupabase(); }, [fetchFromSupabase]);
 
+  // 2D — realtime: when ANY client saves/deletes a product, all connected
+  // devices refresh automatically.
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const channel = supabase
+      .channel(`products-live-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchFromSupabase();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchFromSupabase]);
+
+  // 2B — upsert: standard columns for the DB + the FULL Product object in `data`.
   const saveProduct = useCallback(async (product: Product) => {
-    const updated = products.find((p) => p.id === product.id)
-      ? products.map((p) => (p.id === product.id ? product : p))
-      : [...products, product];
+    const all = safeArray<Product>(products, DEFAULT_PRODUCTS);
+    const updated = all.find((p) => p.id === product.id)
+      ? all.map((p) => (p.id === product.id ? product : p))
+      : [...all, product];
     const validated = safeArray<Product>(updated);
     setProducts(validated);
     ls.set(LS_KEY, validated);
+
     if (!isSupabaseConfigured()) return;
-    await supabase.from('products').upsert(product);
+
+    const { error } = await supabase.from('products').upsert({
+      id: product.id,
+      name: product.name,
+      category: product.occasion || 'birthday',
+      price: Math.round(product.price),
+      rating: product.rating ?? 4.5,
+      reviews: product.reviews ?? 0,
+      tag: product.tags?.[0] ?? null,
+      image: product.image ?? null,
+      description: product.description ?? null,
+      approved: product.inStock !== false,
+      data: product, // ← store the FULL TypeScript Product object here
+    }, { onConflict: 'id' });
+
+    if (error) console.warn('Product save error:', error.message);
   }, [products]);
 
+  // 2C — deleteProduct (unchanged, already correct)
   const deleteProduct = useCallback(async (id: string) => {
     const updated = products.filter((p) => p.id !== id);
     const validated = safeArray<Product>(updated);

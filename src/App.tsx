@@ -21,7 +21,7 @@ import TrackingScreen from './screens/TrackingScreen';
 import AdminScreen from './screens/AdminScreen';
 
 export default function App() {
-  const { view, tab, chatOpen, modalDepth } = useUI();
+  const { view, tab, modalDepth } = useUI();
   const { user } = useAuthStore();
   const { settings } = useSettingsStore();
 
