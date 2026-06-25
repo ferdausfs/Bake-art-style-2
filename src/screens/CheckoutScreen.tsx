@@ -11,6 +11,7 @@ import {
   WALLET_REFERRAL_BONUS,
   pushReferralReward,
 } from '../lib/store';
+import { supabase } from '../lib/supabase';
 import { LocationGate } from '../components/LocationGate';
 
 const PAYMENTS = [
@@ -47,19 +48,49 @@ export default function CheckoutScreen({ onBack }: Props) {
   const [referralInput, setReferralInput] = useState('');
   const [referralApplied, setReferralApplied] = useState(false);
   const [referralError, setReferralError] = useState('');
+  const [referralLoading, setReferralLoading] = useState(false);
   const userReferralCode = getReferralCode(user);
 
-  const applyReferralCode = () => {
+  const applyReferralCode = async () => {
     const code = referralInput.trim().toUpperCase();
     if (!code) return;
+
     if (code === userReferralCode) {
-      setReferralError("You can't use your own referral code");
+      setReferralError("নিজের referral code ব্যবহার করা যাবে না");
       return;
     }
-    // Apply optimistically — give buyer ৳100, store the code for admin to verify
-    setReferralApplied(true);
+    if (!user) {
+      setReferralError("Referral bonus পেতে আগে sign in করো");
+      return;
+    }
+
+    setReferralLoading(true);
     setReferralError('');
-    earnReferral(code, 'buyer');
+
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, email');
+
+      if (error) throw error;
+
+      const matched = (profiles ?? []).find(
+        (profile: { id: string; email: string }) =>
+          getReferralCode({ email: profile.email, id: profile.id }) === code
+      );
+
+      if (!matched) {
+        setReferralError("এই referral code টি valid নয়");
+        return;
+      }
+
+      setReferralApplied(true);
+      earnReferral(code, 'buyer');
+    } catch {
+      setReferralError("Referral code যাচাই করা যায়নি, আবার চেষ্টা করো");
+    } finally {
+      setReferralLoading(false);
+    }
   };
 
   const [showLocationGate, setShowLocationGate] = useState(!locationVerified);
@@ -446,10 +477,10 @@ export default function CheckoutScreen({ onBack }: Props) {
               />
               <button
                 onClick={applyReferralCode}
-                disabled={referralApplied || !referralInput}
+                disabled={referralApplied || !referralInput || referralLoading}
                 className="rounded-xl bg-coral px-3.5 py-2 text-[11px] font-bold text-white active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Apply
+                {referralLoading ? 'Checking...' : 'Apply'}
               </button>
             </div>
             {referralApplied && (

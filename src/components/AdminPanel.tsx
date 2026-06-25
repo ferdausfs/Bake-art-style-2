@@ -26,10 +26,21 @@ const STATUS_ICON: Record<string, typeof Clock> = {
 };
 
 const EMPTY_PRODUCT = {
-  id: '', name: '', tagline: '', description: '', price: 0, image: '',
-  rating: 4.5, reviews: 0, occasion: 'birthday' as const,
-  flavors: ['Chocolate', 'Vanilla', 'Strawberry'], weights: [{ size: '1 kg', price: 0 }],
+  id: '', name: '', tagline: '', description: '',
+  price: 500, oldPrice: undefined as number | undefined,
+  image: '', gallery: [] as string[],
+  rating: 4.5, reviews: 0,
+  occasion: 'birthday' as const,
+  flavors: ['Chocolate', 'Vanilla', 'Strawberry'],
+  weights: [{ size: '1 kg', price: 500 }],
+  toppings: [] as string[],
+  tags: [] as string[],
   bestseller: false,
+  newArrival: true,
+  tier: 'normal' as const,
+  inStock: true,
+  pricePerUnit: undefined as number | undefined,
+  priceUnit: 'kg' as const,
 };
 
 const EMPTY_BANNER = {
@@ -559,6 +570,136 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                     )}
                   </div>
                 </div>
+                {/* Old / MRP Price */}
+                <div>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Old Price ৳ (optional — shows as strikethrough)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 850"
+                    className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                    value={editProduct.oldPrice ?? ''}
+                    onChange={(e) => setEditProduct(prev => prev ? { ...prev, oldPrice: e.target.value ? +e.target.value : undefined } : prev)}
+                  />
+                </div>
+
+                {/* Sizes & Prices */}
+                <div className="space-y-2 border border-ink/8 rounded-2xl p-3">
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Sizes & Prices</label>
+                  <p className="text-[10px] text-ink/40">Customer selects size when ordering. Add at least one.</p>
+                  {(editProduct.weights ?? []).map((w, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input
+                        placeholder="e.g. 1 kg"
+                        className="flex-1 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                        value={w.size}
+                        onChange={(e) => {
+                          const next = [...(editProduct.weights ?? [])];
+                          next[i] = { ...next[i], size: e.target.value };
+                          setEditProduct(prev => prev ? { ...prev, weights: next } : prev);
+                        }}
+                      />
+                      <input
+                        type="number"
+                        placeholder="৳"
+                        className="w-20 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                        value={w.price}
+                        onChange={(e) => {
+                          const next = [...(editProduct.weights ?? [])];
+                          next[i] = { ...next[i], price: +e.target.value };
+                          setEditProduct(prev => prev ? { ...prev, weights: next } : prev);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = (editProduct.weights ?? []).filter((_, idx) => idx !== i);
+                          setEditProduct(prev => prev ? { ...prev, weights: next } : prev);
+                        }}
+                        className="text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setEditProduct(prev => prev ? {
+                      ...prev,
+                      weights: [...(prev.weights ?? []), { size: '', price: prev.price }]
+                    } : prev)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-ink/5 text-xs font-bold text-ink"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Size
+                  </button>
+                </div>
+
+                {/* Flavors */}
+                <div>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Flavors (comma separated)</label>
+                  <input
+                    placeholder="Chocolate, Vanilla, Strawberry"
+                    className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                    value={(editProduct.flavors ?? []).join(', ')}
+                    onChange={(e) => {
+                      const flavors = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                      setEditProduct(prev => prev ? { ...prev, flavors } : prev);
+                    }}
+                  />
+                </div>
+
+                {/* Toppings */}
+                <div>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Toppings (optional, comma separated)</label>
+                  <input
+                    placeholder="Sprinkles, Fondant, Fresh Flowers"
+                    className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                    value={(editProduct.toppings ?? []).join(', ')}
+                    onChange={(e) => {
+                      const toppings = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                      setEditProduct(prev => prev ? { ...prev, toppings } : prev);
+                    }}
+                  />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase">Tags (optional, comma separated)</label>
+                  <input
+                    placeholder="eggless, sugar-free, custom"
+                    className="w-full mt-0.5 px-3 py-2 rounded-xl border border-ink/10 bg-cream text-xs text-ink focus:outline-none"
+                    value={(editProduct.tags ?? []).join(', ')}
+                    onChange={(e) => {
+                      const tags = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                      setEditProduct(prev => prev ? { ...prev, tags } : prev);
+                    }}
+                  />
+                </div>
+
+                {/* Badges */}
+                <div>
+                  <label className="text-[10px] font-bold text-ink/50 uppercase mb-1 block">Badges</label>
+                  <div className="flex gap-2">
+                    {([
+                      { key: 'bestseller' as const, label: 'Bestseller' },
+                      { key: 'newArrival' as const, label: 'New Arrival' },
+                      { key: 'inStock' as const, label: 'In Stock' },
+                    ]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setEditProduct(prev => prev ? { ...prev, [key]: !((prev as Record<string, unknown>)[key] ?? (key === 'inStock' ? true : false)) } : prev)}
+                        className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition ${
+                          ((editProduct as Record<string, unknown>)[key] ?? (key === 'inStock' ? true : false))
+                            ? 'bg-coral text-white'
+                            : 'bg-ink/5 text-ink/50'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <button onClick={async () => { await saveProduct(editProduct); setEditProduct(null); }}
                     className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl bg-coral text-white font-bold text-xs">
