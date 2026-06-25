@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Heart, MapPin, CreditCard, Bell, HelpCircle, Settings, LogOut,
   ChevronRight, Star, Sparkles, LogIn, X, Save, Check, User, AlertTriangle,
-  Cake, Gift, Star as StarIcon, Wallet as WalletIcon, Users as UsersIcon
+  Cake, Gift, Star as StarIcon, Wallet as WalletIcon, Users as UsersIcon,
+  Copy, Share2
 } from 'lucide-react';
 import { useUI, useUser, useOrders, useCart, useAuthStore, useWallet, getReferralCode, WALLET_MAX_REDEEM } from '../lib/store';
 import { useProducts } from '../hooks/useProducts';
@@ -128,6 +129,11 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false, onModalChan
   const { balance, totalEarned, txns } = useWallet();
   const referralCode = getReferralCode(user);
   const [walletHistoryOpen, setWalletHistoryOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const APP_URL = 'https://bake-art-style-2.vercel.app';
+  const referralLink = referralCode ? `${APP_URL}?ref=${referralCode}` : APP_URL;
 
   const [contactOpen, setContactOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -522,10 +528,13 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false, onModalChan
               <Sparkles className="h-4 w-4" strokeWidth={2} />
             </div>
             <div className="flex-1">
-              <div className="text-[13px] font-bold text-ink">Invite friends, earn ৳200</div>
+              <div className="text-[13px] font-bold text-ink">Invite friends, earn ৳100</div>
               <div className="text-[11px] text-ink-200">Share your referral link</div>
             </div>
-            <button className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-bold text-white active:scale-95">
+            <button
+              onClick={() => setInviteOpen(true)}
+              className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-bold text-white active:scale-95"
+            >
               Invite
             </button>
           </div>
@@ -852,6 +861,109 @@ export default function ProfileScreen({ onAuthOpen, isAdmin = false, onModalChan
       )}
 
       <WalletHistoryModal open={walletHistoryOpen} onClose={() => setWalletHistoryOpen(false)} />
+
+      {/* ── Invite Sheet ── */}
+      {inviteOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setInviteOpen(false)}
+          />
+
+          {/* Sheet */}
+          <div className="relative rounded-t-3xl bg-white px-5 pt-5 pb-10 shadow-2xl">
+
+            {/* Drag handle */}
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-100" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-display text-[18px] font-bold tracking-tight text-ink">
+                  Invite & Earn
+                </h2>
+                <p className="text-[12px] text-ink-200 mt-0.5">
+                  বন্ধুকে invite করো, দুজনেই পাও ৳100
+                </p>
+              </div>
+              <button
+                onClick={() => setInviteOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-50 text-ink-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* How it works */}
+            <div className="mb-5 rounded-2xl bg-cream px-4 py-3.5 space-y-2.5">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-ink-200 mb-1">
+                কীভাবে কাজ করে
+              </div>
+              <Step n="1" text="নিচের লিংক বা কোড বন্ধুকে পাঠাও" />
+              <Step n="2" text="বন্ধু প্রথম অর্ডারে এই কোড ব্যবহার করলে সে পাবে ৳100 wallet bonus" />
+              <Step n="3" text="তুমিও পাবে ৳100 wallet bonus — সরাসরি তোমার wallet এ" />
+            </div>
+
+            {/* Referral code display */}
+            {referralCode && (
+              <div className="mb-3 rounded-2xl border border-coral/20 bg-coral-50/40 px-4 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-coral/70 mb-1">
+                  তোমার রেফারেল কোড
+                </div>
+                <div className="font-mono text-[22px] font-bold tracking-[0.15em] text-coral">
+                  {referralCode}
+                </div>
+              </div>
+            )}
+
+            {/* Link display */}
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-ink-50 bg-white px-3.5 py-2.5">
+              <span className="flex-1 truncate text-[11.5px] text-ink-200 font-medium">
+                {referralLink}
+              </span>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(referralLink);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch {
+                    // fallback: select text
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-ink-50 px-3 py-1.5 text-[11px] font-bold text-ink active:scale-95 transition"
+              >
+                {copied
+                  ? <><Check className="h-3 w-3 text-emerald-600" /> Copied!</>
+                  : <><Copy className="h-3 w-3" /> Copy</>
+                }
+              </button>
+            </div>
+
+            {/* Share button */}
+            <button
+              onClick={async () => {
+                const shareText = `বেক আর্ট স্টাইল থেকে কেক অর্ডার করো! আমার রেফারেল কোড ${referralCode} দিয়ে অর্ডার করলে তুমি পাবে ৳100 ছাড়।`;
+                if (navigator.share) {
+                  try {
+                    await navigator.share({ title: 'বেক আর্ট স্টাইল', text: shareText, url: referralLink });
+                  } catch { /* user cancelled */ }
+                } else {
+                  await navigator.clipboard.writeText(shareText + '\n' + referralLink);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }
+              }}
+              className="btn-primary flex w-full h-13 items-center justify-center gap-2 rounded-2xl text-[14px] font-bold"
+            >
+              <Share2 className="h-4 w-4" />
+              Share করো
+            </button>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -893,6 +1005,17 @@ function Stat({ label, value }: { label: string; value: number }) {
     >
       <div className="font-display text-[20px] font-bold tabular text-ink">{value}</div>
       <div className="mt-0.5 text-[10.5px] font-semibold text-ink-200">{label}</div>
+    </div>
+  );
+}
+
+function Step({ n, text }: { n: string; text: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-coral text-white text-[10px] font-bold">
+        {n}
+      </div>
+      <p className="text-[12px] text-ink leading-snug">{text}</p>
     </div>
   );
 }
