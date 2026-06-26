@@ -76,6 +76,7 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
   const [newGalleryCaption, setNewGalleryCaption] = useState('');
   const [newZone, setNewZone] = useState('');
   const [orderFilter, setOrderFilter] = useState<'all' | Order['status']>('all');
+  const [viewImage, setViewImage] = useState<string | null>(null);
   const productImgRef = useRef<HTMLInputElement>(null);
   const productGalleryRefs = useRef<HTMLInputElement>(null);
   const bannerImgRef = useRef<HTMLInputElement>(null);
@@ -344,11 +345,32 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
                   <p><span className="font-bold text-ink">Bill:</span> {formatINR(o.subtotal || 0)} - {formatINR(o.discount || 0)} + {formatINR(o.deliveryFee || 0)} = {formatINR(o.total || 0)}</p>
                 </div>
 
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-2 space-y-2">
                   {(o.items || []).map((i, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="truncate text-ink/65">{i?.name || 'N/A'} · {i?.size || 'N/A'} · {i?.flavor || 'N/A'} ×{i?.quantity || 1}</span>
-                      <span className="font-bold text-ink">{formatINR((i?.price || 0) * (i?.quantity || 1))}</span>
+                    <div key={idx} className="flex items-start gap-2.5">
+                      {i?.image ? (
+                        <button
+                          onClick={() => setViewImage(i.image!)}
+                          className="flex-shrink-0 h-12 w-12 rounded-xl overflow-hidden border border-ink/10 bg-cream active:scale-95 transition"
+                          title="Tap to view full image"
+                        >
+                          <img src={i.image} alt={i?.name || ''} className="h-full w-full object-cover" />
+                        </button>
+                      ) : (
+                        <div className="flex-shrink-0 h-12 w-12 rounded-xl bg-ink/5 flex items-center justify-center">
+                          <ImageIcon className="w-4 h-4 text-ink/25" strokeWidth={1.5} />
+                        </div>
+                      )}
+                      <div className="flex flex-1 items-start justify-between gap-1 min-w-0 pt-0.5">
+                        <span className="text-[11px] leading-relaxed text-ink/65 min-w-0">
+                          <span className="font-semibold text-ink">{i?.name || 'N/A'}</span>
+                          {' · '}{i?.size || 'N/A'}{' · '}{i?.flavor || 'N/A'}{' ×'}{i?.quantity || 1}
+                          {i?.message && (
+                            <span className="block text-[10px] text-coral/80 mt-0.5">📝 {i.message}</span>
+                          )}
+                        </span>
+                        <span className="flex-shrink-0 text-xs font-bold text-ink">{formatINR((i?.price || 0) * (i?.quantity || 1))}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1226,6 +1248,36 @@ export function AdminPanel({ onClose, embedded = false }: Props) {
           </div>
         )}
       </div>
+
+      {/* Image lightbox — for order item images & custom cake reference photos */}
+      {viewImage && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-5 bg-black/85 backdrop-blur-sm"
+          onClick={() => setViewImage(null)}
+        >
+          <div
+            className="relative w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={viewImage}
+              alt="Order item"
+              className="w-full max-h-[72vh] rounded-3xl object-contain bg-white"
+              style={{ boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+            />
+            <button
+              onClick={() => setViewImage(null)}
+              className="absolute -top-3 -right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-lg transition active:scale-90"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+            <p className="mt-3 text-center text-[11px] text-white/55">
+              Tap outside to close
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
