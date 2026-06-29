@@ -303,3 +303,13 @@ button { -webkit-tap-highlight-color: transparent; }
   background-size: 200% 100%;
   animation: shimmerSlide 1.6s ease-in-out infinite;
 }
+
+/* ── Confetti animation ── */
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg) scale(.6); opacity: 0; }
+}
+.anim-confetti {
+  animation: confetti-fall linear forwards;
+}
